@@ -1,0 +1,37 @@
+---
+title: "Dissertation Code v1"
+author: "Archie C"
+date: "2025-05-22"
+output: html_document
+---
+
+```{r preamble, include=FALSE, message=FALSE, warning=FALSE}
+source("preamble.R")
+```
+
+
+```{r Data Import}
+df <- read_xlsx("data/data1.xlsx")
+dt <- as.data.table(df)
+# list <- split(dt, by = names(dt)[1], keep.by = T)
+```
+
+```{r data processing}
+df <- df %>%
+    rename_with(~ c("Inst", "Bid", "Ask", "Mid", "Date")) %>%
+    mutate(Date = as.Date(Date, format = "%Y-%m-%d"),
+           Inst = substr(Inst,1,nchar(Inst)-1))
+
+head(df)
+tail(df)
+
+```
+
+
+
+```{r data vis}
+head(gbp)
+head(gbpfwd)
+```
+
+
