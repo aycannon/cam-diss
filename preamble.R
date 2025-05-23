@@ -65,5 +65,7 @@ library(hdm)
 # Class 8
 # library(quarks)
 
+library(quantreg)
+
 seed <- 7234
 set.seed(seed)
