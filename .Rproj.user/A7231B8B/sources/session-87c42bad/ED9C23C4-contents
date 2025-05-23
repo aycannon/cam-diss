@@ -17,21 +17,105 @@ dt <- as.data.table(df)
 ```
 
 ```{r data processing}
-df <- df %>%
+df <- read_xlsx("data/data1.xlsx") %>%
     rename_with(~ c("Inst", "Bid", "Ask", "Mid", "Date")) %>%
     mutate(Date = as.Date(Date, format = "%Y-%m-%d"),
-           Inst = substr(Inst,1,nchar(Inst)-1))
+           Type = if_else(grepl("1MV|FWD", Inst), "forward", "spot"),
+           Base = gsub("1MV=|=|FWD.*", "", Inst))
 
 head(df)
 tail(df)
 
+spot_t <- df %>%
+    filter(Type == "spot") %>%
+    dplyr::select(Base, SpotDate = Date, s_t = Mid)
+spot_t1 <- df %>%
+    filter(Type == "spot") %>%
+    dplyr::select(Base, Spot1Date = Date, s_t1 = Mid) %>%
+    mutate(date1 = Spot1Date %m+% months(-1))
+
+spot_df <- spot_t %>%
+    inner_join(spot_t1, by = c("Base", "SpotDate" = "date1")) %>%
+    mutate(
+        spot = as.numeric(log(s_t)),
+        spot1 = as.numeric(log(s_t1)),
+        excess = as.numeric(spot1 - spot)
+    )
+
+
+fwd_df <- df %>%
+    filter(Type == "forward") %>%
+    dplyr::select(Base, Date, FwdMid = Mid)
+
+df1 <- fwd_df %>%
+    inner_join(spot_df, by = c("Base", "Date" = "SpotDate")) %>%
+    mutate(
+        f_t = as.numeric(FwdMid),
+        fwd = log(f_t),
+        prem = as.numeric(fwd - spot)
+    )
+
+currencies <- unique(df1$Base)
 ```
+
+So to clarify what is happening in this data frame:
+- `Date`: The date of the forward contract and spot rate, this can be considered $t$.
+- `FwdMid`: The forward rate at time $t$, therefore aligning with the `Date` variable.
+- `s_t`: The spot rate at time $t$, therefore aligning with the `Date` variable.
+- `Spot1Date`: equivalent to $t+1$. This variable is here so that we can simply use mutate to calculate excess returns
+- `s_t1`: The spot rate at time $t+1$, therefore aligning with the `Spot1Date` variable.
+- `excess`: This is the excess returns variable. $\log(s_{t+1})-\log(s_t)$. This means that this is aligned with the `Spot1Date` variable.
+- `f_t`: The forward rate at time $t$, therefore aligning with the `Date` variable.
+- `fwd`: The log of the forward rate at time $t$, therefore aligning with the `Date` variable.
+- `prem`: The forward premium, which is the difference between the log of the forward rate and the log of the spot rate at time $t$.
+
+So in the simple analysis of the forward premium on excess returns, these are the correct variables to use, and aligned correctly.
 
 
 
 ```{r data vis}
-head(gbp)
-head(gbpfwd)
+ggplot(df1, aes(x = Date, y = prem)) +
+    geom_line(aes(color = Base)) +
+    labs(title = "Forward Premiums",
+         x = "Date",
+         y = "Premium") +
+    theme_minimal() +
+    scale_color_manual(values = c("blue", "red", "green", "purple")) +
+    theme(legend.position = "bottom")
+
+ggplot(df1, aes(x = Date, y = s_t)) +
+    geom_line(aes(color = Base)) +
+    labs(title = "Spot Rates",
+         x = "Date",
+         y = "Spot") +
+    theme_minimal() +
+    scale_color_manual(values = c("blue", "red", "green", "purple")) +
+    theme(legend.position = "bottom")
+```
+
+
+```{r simple regression to check on the forward premium bias}
+simple <- df1 %>%
+    group_by(Base) %>%
+    do(tidy(lm(excess ~ prem, data = .))) %>%
+    ungroup()
+
+for (base in currencies){
+    cat("--------------", base , "--------------")
+    m <- lm(excess ~ prem, data = df1 %>% filter(Base == base))
+    print(linearHypothesis(m, "prem = 1"))
+}
+```
+
+```{r quantile regression}
+
+for (base in currencies){
+    cat("--------------", base , "--------------")
+    q <- rq(excess ~ prem, data = df1 %>% filter(Base == base), tau = c(0.25, 0.5, 0.75))
+    print(linearHypothesis(m, "prem = 1"))
+}
+qr <- rq(excess ~ prem, data = df1%>% filter(Base == "GBP"), tau = c(0.25, 0.5, 0.75))
+summary(qr)
 ```
 
 
