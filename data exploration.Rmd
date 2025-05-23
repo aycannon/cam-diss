@@ -116,6 +116,7 @@ for (base in currencies){
 }
 qr <- rq(excess ~ prem, data = df1%>% filter(Base == "GBP"), tau = c(0.25, 0.5, 0.75))
 summary(qr)
+
 ```
 
 

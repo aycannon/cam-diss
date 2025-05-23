@@ -3,7 +3,7 @@
     "path": "~/Desktop/Cambridge/diss/dissertation/data exploration.Rmd",
     "project_path": "data exploration.Rmd",
     "type": "r_markdown",
-    "hash": "3901937265",
+    "hash": "1851838755",
     "contents": "",
     "dirty": false,
     "created": 1747925331168.0,
@@ -18,11 +18,11 @@
         "last_setup_crc32": ""
     },
     "folds": "",
-    "lastKnownWriteTime": 1748032048,
+    "lastKnownWriteTime": 1748034187,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1748032049012,
+    "last_content_update": 1748034187296,
     "read_only": false,
     "read_only_alternatives": []
 }
