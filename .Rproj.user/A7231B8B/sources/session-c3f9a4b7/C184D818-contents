@@ -66,6 +66,8 @@ library(hdm)
 # library(quarks)
 
 library(quantreg)
+library(car)
+library(quantregForest)
 
 seed <- 7234
 set.seed(seed)
