@@ -157,5 +157,26 @@ preds <- predict(qrf_gbp, newdata = data.frame(prem = df_gbp$prem), what = c(0.1
 ```
 
 
+```{r}
+kt_value <- function(r, alpha = 0.88, lambda = 2.25) {
+  ifelse(r >= 0, r^alpha, -lambda * (-r)^alpha)
+}
+
+df2 <- df1 %>%
+    mutate(pt = kt_value(excess))
+
+# plot excess returns vs pt
+ggplot(df2, aes(x = excess, y = pt)) +
+    geom_point(aes(color = Base), alpha = 0.5) +
+    labs(title = "Excess Returns vs. Prospect Theory",
+         x = "Excess Returns",
+         y = "pt") +
+    theme_minimal() +
+    scale_color_manual(values = c("blue", "red", "green", "purple")) +
+    theme(legend.position = "bottom")
+
+```
+
+
 
 
