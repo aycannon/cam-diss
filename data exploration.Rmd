@@ -4,6 +4,9 @@ author: "Archie C"
 date: "2025-05-22"
 output: html_document
 ---
+```{r}
+
+```
 
 ```{r preamble, include=FALSE, message=FALSE, warning=FALSE}
 source("preamble.R")
@@ -109,6 +112,7 @@ for (base in currencies){
 
 ```{r quantile regression}
 quantiles <- c(0.25, 0.5, 0.75, 0.9)
+qr_res <- data.frame()
 
 for (base in currencies){
     cat("--------------", base , "--------------")
@@ -127,6 +131,15 @@ for (base in currencies){
     z <- (coef_est - 1) / coef_se
     p <- pnorm(z)
     
+    qr_res <- rbind(qr_res, data.frame(
+      Base = base,
+      Tau = tau,
+      Estimate = coef_est,
+      StdError = coef_se,
+      Z = z,
+      Pvalue = p
+    ))
+    
     cat("  Estimate:", round(coef_est, 4), 
         " | SE:", round(coef_se, 4),
         " | z:", round(z, 2),
@@ -136,6 +149,21 @@ for (base in currencies){
 
 
 ```
+
+```{r}
+ggplot(qr_res, aes(x = Tau, y = Estimate, color = Base)) +
+  geom_line() +
+  geom_point() +
+  geom_errorbar(aes(ymin = Estimate - 1.96 * StdError,
+                    ymax = Estimate + 1.96 * StdError),
+                width = 0.02) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "grey") +
+  labs(title = "Quantile Regression Estimates of Forward Premium Coefficient",
+       x = "Quantile (τ)", y = "Estimate of β (prem)") +
+  theme_minimal()
+
+```
+
 
 
 ```{r quantile forests}
@@ -153,6 +181,112 @@ print(qrf_gbp)
 preds <- predict(qrf_gbp, newdata = data.frame(prem = df_gbp$prem), what = c(0.1, 0.5, 0.9))
 
 
+
+```
+
+
+```{r}
+kt_value <- function(r, alpha = 0.88, lambda = 2.25) {
+  ifelse(r >= 0, r^alpha, -lambda * (-r)^alpha)
+}
+
+
+
+df2 <- df1 %>%
+    mutate(pt = kt_value(excess))
+
+# plot excess returns vs pt
+ggplot(df2, aes(x = excess, y = pt)) +
+    geom_point(aes(color = Base), alpha = 0.5) +
+    labs(title = "Excess Returns vs. Prospect Theory",
+         x = "Excess Returns",
+         y = "pt") +
+    theme_minimal() +
+    scale_color_manual(values = c("blue", "red", "green", "purple")) +
+    theme(legend.position = "bottom")
+
+```
+
+```{r}
+
+tune_pt_params_rolling <- function(data, alphas, lambdas, window_size = 60, horizon = 1) {
+  param_grid <- expand.grid(alpha = alphas, lambda = lambdas)
+  results <- data.frame()
+  
+  n <- nrow(data)
+  max_start <- n - window_size - horizon + 1
+  
+  pb <- progress_bar$new(
+    format = "  tuning [:bar] :percent eta: :eta",
+    total = nrow(param_grid), clear = FALSE, width = 60
+  )
+  
+  for (i in 1:nrow(param_grid)) {
+    alpha <- param_grid$alpha[i]
+    lambda <- param_grid$lambda[i]
+    rmse_vec <- c()
+    
+    for (start in 1:max_start) {
+      train_idx <- start:(start + window_size - 1)
+      test_idx <- (start + window_size):(start + window_size + horizon - 1)
+      
+      train <- data[train_idx, ]
+      test <- data[test_idx, ]
+      
+      model <- lm(kt_value(excess, alpha, lambda) ~ prem, data = train)
+      preds <- predict(model, newdata = test)
+      y_true <- kt_value(test$excess, alpha, lambda)
+      rmse <- sqrt(mean((y_true - preds)^2))
+      
+      rmse_vec <- c(rmse_vec, rmse)
+    }
+    
+    results <- rbind(results, data.frame(alpha, lambda, RMSE = mean(rmse_vec)))
+    pb$tick()
+  }
+  
+  best <- results[which.min(results$RMSE), ]
+  return(list(best_params = best, full_results = results))
+}
+
+
+```
+
+```{r Tuning value functions}
+df_gbp <- df1 %>% filter(Base == "GBP")
+
+alphas <- seq(0.5, 1.0, by = 0.05)
+lambdas <- seq(0, 5.0, by = 0.25)
+
+tuned <- tune_pt_params_rolling(df_gbp, alphas, lambdas)
+best_params <- tuned$best_params
+
+print(best_params)
+
+```
+
+```{r}
+
+
+plot_value_function <- function(alphas = c(0.5, 0.88), lambdas = c(1, 2.25, 5), x_range = c(-2, 2)) {
+  x_vals <- seq(x_range[1], x_range[2], length.out = 500)
+  plot_data <- expand.grid(x = x_vals, alpha = alphas, lambda = lambdas)
+  plot_data$value <- mapply(kt_value, plot_data$x, plot_data$alpha, plot_data$lambda)
+  plot_data$label <- paste0("α=", plot_data$alpha, ", λ=", plot_data$lambda)
+  
+  ggplot(plot_data, aes(x = x, y = value, color = label)) +
+    geom_line() +
+    labs(
+      title = "Prospect Theory Value Function",
+      x = "Excess Return (x)",
+      y = "Transformed Value v(x)",
+      color = "Parameters"
+    ) +
+    theme_minimal()
+}
+
+# Example usage:
+plot_value_function()
 
 ```
 
