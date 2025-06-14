@@ -106,9 +106,126 @@ simple <- df1 %>%
 for (base in currencies){
     cat("--------------", base , "--------------")
     m <- lm(excess ~ prem, data = df1 %>% filter(Base == base))
+    cat("\n alpha:", round(coef(m)[1], 4), 
+        " | beta:", round(coef(m)[2], 4), "\n")
+    #print(coef(m))
     print(linearHypothesis(m, "prem = 1"))
 }
 ```
+
+
+So we have found recreated some of the results. We see that in the case of Canada, the result is not statistically different from 1, but in the case of the other currencies, we see that the forward premium is statistically significantly different from 1. This is consistent with the findings in the literature.
+
+```{r plot of coefficients from simple regression}
+ggplot(simple %>% filter(term == "prem"), aes(x = Base, y = estimate)) +
+  geom_pointrange(aes(ymin = estimate - std.error, ymax = estimate + std.error),
+                  position = position_dodge(width = 0.5), 
+                  color = "steelblue") +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
+  labs(title = "Forward Premium Coefficients",
+       x = "Currency",
+       y = "Coefficient (β)") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+
+```
+
+### Estimating the asymmetric loss function
+
+```{r}
+# creating forecast error variable
+# - used to calculate the loss function
+
+df1 <- df1 %>%
+  mutate(
+    forecast_error = spot1 - fwd  # s_{t+1} - f_t
+  ) %>%
+  arrange(Base, Date) %>%
+  group_by(Base) %>%
+  mutate(
+    lag_error = lag(forecast_error)
+  ) %>%
+  ungroup() %>%
+  na.omit()
+
+# Choose loss power (1 for Lin-Lin, 2 for Quad-Quad)
+p <- 2
+
+# defining moment conditions
+gmm_moments <- function(theta, data) {
+  alpha <- theta[1]
+  e <- data$forecast_error
+  z <- as.matrix(data[, c("const", "lag_error")])
+  lambda <- alpha + (1 - 2 * alpha) * (e < 0)
+  g <- lambda * e^(p - 1) * z
+  return(g)
+}
+
+# Prepare results list
+currency_results <- list()
+currency_list <- unique(df1$Base)
+
+# Loop over currencies
+for (cur in currency_list) {
+  message("Running GMM for ", cur)
+  data_cur <- df1 %>%
+    filter(Base == cur) %>%
+    mutate(
+      forecast_error = spot1 - fwd,
+      lag_error = lag(forecast_error),
+      const = 1
+    ) %>%
+    dplyr::select(forecast_error, lag_error, const) %>%
+    na.omit()
+
+  if (nrow(data_cur) > 10) {
+    # GMM with Brent optimization using CUE
+    res <- tryCatch({
+      gmm(g = gmm_moments,
+          x = data_cur,
+          t0 = c(0.5),
+          type = "cue",
+          method = "Brent",
+          lower = 0.01,
+          upper = 0.99)
+    }, error = function(e) NULL)
+
+    if (!is.null(res)) {
+      alpha_hat <- coef(res)
+      vcv_hat <- vcov(res)
+      se_alpha <- sqrt(vcv_hat[1, 1])
+      t_stat <- (alpha_hat - 0.5) / se_alpha
+      p_val <- 2 * pt(-abs(t_stat), df = nrow(data_cur) - 1)
+
+      currency_results[[cur]] <- list(
+        summary = summary(res),
+        alpha = alpha_hat,
+        vcov = vcv_hat,
+        t_stat = t_stat,
+        p_val = p_val
+      )
+    }
+  } else {
+    message("Not enough data for ", cur)
+  }
+}
+
+# View results for one example currency (e.g., EUR)
+print(currency_results[["EUR"]]$summary)
+print(currency_results[["EUR"]]$t_stat)
+print(currency_results[["EUR"]]$p_val)
+
+# Extract alpha estimates
+alphas <- sapply(currency_results, function(x) if (!is.null(x)) x$alpha else NA)
+print(alphas)
+
+# Extract p-values for H0: alpha = 0.5
+p_vals <- sapply(currency_results, function(x) if (!is.null(x)) x$p_val else NA)
+print(p_vals)
+
+```
+
+
 
 ```{r quantile regression}
 quantiles <- c(0.25, 0.5, 0.75, 0.9)

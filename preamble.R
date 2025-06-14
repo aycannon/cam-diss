@@ -1,8 +1,7 @@
 # premable
 
-library(tidyverse)
-library(lubridate)
-library(readxl)
+
+
 library(highcharter)
 library(data.table)
 library(magrittr)
@@ -12,6 +11,22 @@ library(R.matlab)
 library(reshape2)
 library(xts)
 library(mice)
+install.packages("aod")
+
+# Diss packages
+library(lmtest)
+library(AER)
+library(gmm)
+library(aod)
+library(readxl)
+library(tidyverse)
+library(lubridate)
+library(sandwich)
+library(quantreg)
+library(car)
+library(quantregForest)
+
+
 library(VIM)
 
 library(timetk)
@@ -30,7 +45,7 @@ library(MarkowitzR)
 library(quadprog)
 library(XICOR)
 library(SharpeR)
-library(sandwich)
+
 library(PeerPerformance)
 
 library(nlshrink) # covariance estimation - shrinkage
@@ -65,9 +80,7 @@ library(hdm)
 # Class 8
 # library(quarks)
 
-library(quantreg)
-library(car)
-library(quantregForest)
+
 
 seed <- 7234
 set.seed(seed)
