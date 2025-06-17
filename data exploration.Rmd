@@ -4,9 +4,6 @@ author: "Archie C"
 date: "2025-05-22"
 output: html_document
 ---
-```{r}
-
-```
 
 ```{r preamble, include=FALSE, message=FALSE, warning=FALSE}
 source("preamble.R")
@@ -16,81 +13,79 @@ source("preamble.R")
 ```{r Data Import}
 df <- read_xlsx("data/data1.xlsx")
 dt <- as.data.table(df)
-# list <- split(dt, by = names(dt)[1], keep.by = T)
 ```
 
-```{r data processing}
-df <- read_xlsx("data/data1.xlsx") %>%
-    rename_with(~ c("Inst", "Bid", "Ask", "Mid", "Date")) %>%
-    mutate(Date = as.Date(Date, format = "%Y-%m-%d"),
-           Type = if_else(grepl("1MV|FWD", Inst), "forward", "spot"),
-           Base = gsub("1MV=|=|FWD.*", "", Inst))
+```{r wide format}
+data <- df %>%
+    mutate(Base = gsub("=", "", Inst))
 
-head(df)
-tail(df)
+wide <- data %>%
+    distinct() %>% # there are duplicates, but they are perfect duplicates so we take the distinct values
+    dplyr::select(Base, Date, Mid) %>%
+    pivot_wider(names_from = Base, values_from = Mid) %>%
+    arrange(Date) %>%
+    mutate(across(-Date, log))
+# everything has been logged as we work in log(spot) and log(forward)
+# now we need s_{t+1}
 
-spot_t <- df %>%
-    filter(Type == "spot") %>%
-    dplyr::select(Base, SpotDate = Date, s_t = Mid)
-spot_t1 <- df %>%
-    filter(Type == "spot") %>%
-    dplyr::select(Base, Spot1Date = Date, s_t1 = Mid) %>%
-    mutate(date1 = Spot1Date %m+% months(-1))
+spot_lagged <- wide %>%
+  transmute(Date = Date %m+% months(1),  # shift date back by 1 month to align with t
+            GBP_t1 = GBP,
+            EUR_t1 = EUR,
+            JPY_t1 = JPY,
+            CAD_t1 = CAD,
+            GBP_FWD = GBP1MV,
+            EUR_FWD = EUR1MV,
+            JPY_FWD = JPY1MV,
+            CAD_FWD = CAD1MV)
 
-spot_df <- spot_t %>%
-    inner_join(spot_t1, by = c("Base", "SpotDate" = "date1")) %>%
-    mutate(
-        spot = as.numeric(log(s_t)),
-        spot1 = as.numeric(log(s_t1)),
-        excess = as.numeric(spot1 - spot)
-    )
+wide_data <- wide %>%
+    inner_join(spot_lagged, by = "Date") %>%
+    mutate(GBP_excess = GBP - GBP_t1,
+           EUR_excess = EUR - EUR_t1,
+           JPY_excess = JPY - JPY_t1,
+           CAD_excess = CAD - CAD_t1,
+           GBP_prem = GBP_FWD - GBP_t1,
+           EUR_prem = EUR_FWD - EUR_t1,
+           JPY_prem = JPY_FWD - JPY_t1,
+           CAD_prem = CAD_FWD - CAD_t1)
 
-
-fwd_df <- df %>%
-    filter(Type == "forward") %>%
-    dplyr::select(Base, Date, FwdMid = Mid)
-
-df1 <- fwd_df %>%
-    inner_join(spot_df, by = c("Base", "Date" = "SpotDate")) %>%
-    mutate(
-        f_t = as.numeric(FwdMid),
-        fwd = log(f_t),
-        prem = as.numeric(fwd - spot)
-    )
-
-currencies <- unique(df1$Base)
 ```
 
-So to clarify what is happening in this data frame:
-- `Date`: The date of the forward contract and spot rate, this can be considered $t$.
-- `FwdMid`: The forward rate at time $t$, therefore aligning with the `Date` variable.
-- `s_t`: The spot rate at time $t$, therefore aligning with the `Date` variable.
-- `Spot1Date`: equivalent to $t+1$. This variable is here so that we can simply use mutate to calculate excess returns
-- `s_t1`: The spot rate at time $t+1$, therefore aligning with the `Spot1Date` variable.
-- `excess`: This is the excess returns variable. $\log(s_{t+1})-\log(s_t)$. This means that this is aligned with the `Spot1Date` variable.
-- `f_t`: The forward rate at time $t$, therefore aligning with the `Date` variable.
-- `fwd`: The log of the forward rate at time $t$, therefore aligning with the `Date` variable.
-- `prem`: The forward premium, which is the difference between the log of the forward rate and the log of the spot rate at time $t$.
 
-So in the simple analysis of the forward premium on excess returns, these are the correct variables to use, and aligned correctly.
 
+```{r initial regressions}
+lm(GBP_excess ~ GBP_prem, data = wide_data) %>% summary()
+lm(EUR_excess ~ EUR_prem, data = wide_data) %>% summary()
+lm(JPY_excess ~ JPY_prem, data = wide_data) %>% summary()
+lm(CAD_excess ~ CAD_prem, data = wide_data) %>% summary()
+```
 
 
 ```{r data vis}
-ggplot(df1, aes(x = Date, y = prem)) +
-    geom_line(aes(color = Base)) +
-    labs(title = "Forward Premiums",
+
+long_spot <- wide %>%
+  dplyr::select(Date, GBP, EUR, CAD) %>%  # drop JPY here
+  pivot_longer(cols = -Date, names_to = "Base", values_to = "Spot")
+
+long_prem <- wide_data %>%
+  dplyr::select(Date, GBP_prem, EUR_prem, CAD_prem, JPY_prem) %>%  # drop JPY here
+  pivot_longer(cols = -Date, names_to = "Base", values_to = "Prem")
+
+ggplot(long_spot, aes(x = Date, y = Spot, color = Base)) +
+    geom_line() +
+    labs(title = "Spot Rates",
          x = "Date",
          y = "Premium") +
     theme_minimal() +
     scale_color_manual(values = c("blue", "red", "green", "purple")) +
     theme(legend.position = "bottom")
 
-ggplot(df1, aes(x = Date, y = s_t)) +
+ggplot(long_prem, aes(x = Date, y = Prem)) +
     geom_line(aes(color = Base)) +
-    labs(title = "Spot Rates",
+    labs(title = "Forward Premium",
          x = "Date",
-         y = "Spot") +
+         y = "Premium") +
     theme_minimal() +
     scale_color_manual(values = c("blue", "red", "green", "purple")) +
     theme(legend.position = "bottom")
@@ -98,18 +93,41 @@ ggplot(df1, aes(x = Date, y = s_t)) +
 
 
 ```{r simple regression to check on the forward premium bias}
-simple <- df1 %>%
-    group_by(Base) %>%
-    do(tidy(lm(excess ~ prem, data = .))) %>%
-    ungroup()
+currencies <- c("GBP", "EUR", "CAD", "JPY")
 
-for (base in currencies){
-    cat("--------------", base , "--------------")
-    m <- lm(excess ~ prem, data = df1 %>% filter(Base == base))
-    cat("\n alpha:", round(coef(m)[1], 4), 
-        " | beta:", round(coef(m)[2], 4), "\n")
-    #print(coef(m))
-    print(linearHypothesis(m, "prem = 1"))
+# Construct tidy summary for each currency
+simple <- map_dfr(currencies, function(cur) {
+  excess_var <- paste0(cur, "_excess")
+  prem_var <- paste0(cur, "_prem")
+  
+  data_cur <- wide_data %>%
+    dplyr::select(all_of(c(excess_var, prem_var))) %>%
+    filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]]))
+  
+  model <- lm(as.formula(paste0(excess_var, " ~ ", prem_var)), data = data_cur)
+  tidy(model) %>% mutate(Currency = cur)
+})
+
+for (base in currencies) {
+  cat("--------------", base , "--------------\n")
+  
+  excess_var <- paste0(base, "_excess")
+  prem_var <- paste0(base, "_prem")
+  
+  # Keep only relevant rows with no NA
+  df <- wide_data %>%
+    dplyr::select(Date, all_of(c(excess_var, prem_var))) %>%
+    filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]]))
+  
+  # Dynamically construct the formula
+  f <- as.formula(paste0(excess_var, " ~ ", prem_var))
+  m <- lm(f, data = df)
+  
+  cat("  alpha:", round(coef(m)[1], 4), 
+      " | beta:", round(coef(m)[2], 4), "\n")
+  
+  # Run hypothesis test: H0: beta = 1
+  print(linearHypothesis(m, paste0(prem_var, " = 1")))
 }
 ```
 
@@ -117,14 +135,17 @@ for (base in currencies){
 So we have found recreated some of the results. We see that in the case of Canada, the result is not statistically different from 1, but in the case of the other currencies, we see that the forward premium is statistically significantly different from 1. This is consistent with the findings in the literature.
 
 ```{r plot of coefficients from simple regression}
-ggplot(simple %>% filter(term == "prem"), aes(x = Base, y = estimate)) +
+ggplot(
+  simple %>% filter(grepl("_prem$", term)),
+  aes(x = Currency, y = estimate)
+) +
   geom_pointrange(aes(ymin = estimate - std.error, ymax = estimate + std.error),
                   position = position_dodge(width = 0.5), 
                   color = "steelblue") +
   geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
   labs(title = "Forward Premium Coefficients",
        x = "Currency",
-       y = "Coefficient (β)") +
+       y = expression(beta~"Estimate")) +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
@@ -132,26 +153,9 @@ ggplot(simple %>% filter(term == "prem"), aes(x = Base, y = estimate)) +
 
 ### Estimating the asymmetric loss function
 
-```{r}
-# creating forecast error variable
-# - used to calculate the loss function
-
-df1 <- df1 %>%
-  mutate(
-    forecast_error = spot1 - fwd  # s_{t+1} - f_t
-  ) %>%
-  arrange(Base, Date) %>%
-  group_by(Base) %>%
-  mutate(
-    lag_error = lag(forecast_error)
-  ) %>%
-  ungroup() %>%
-  na.omit()
-
-# Choose loss power (1 for Lin-Lin, 2 for Quad-Quad)
+```{r estimating the loss functions}
 p <- 2
 
-# defining moment conditions
 gmm_moments <- function(theta, data) {
   alpha <- theta[1]
   e <- data$forecast_error
@@ -161,25 +165,22 @@ gmm_moments <- function(theta, data) {
   return(g)
 }
 
-# Prepare results list
-currency_results <- list()
-currency_list <- unique(df1$Base)
-
-# Loop over currencies
-for (cur in currency_list) {
+for (cur in currencies) {
   message("Running GMM for ", cur)
-  data_cur <- df1 %>%
-    filter(Base == cur) %>%
-    mutate(
-      forecast_error = spot1 - fwd,
-      lag_error = lag(forecast_error),
+
+  # Get wide-format forecast error
+  e_col <- cur
+  f_col <- paste0(cur, "_FWD")
+  
+  data_cur <- wide_data %>%
+    transmute(
+      forecast_error = .data[[e_col]] - .data[[f_col]],
+      lag_error = lag(.data[[e_col]] - .data[[f_col]]),
       const = 1
     ) %>%
-    dplyr::select(forecast_error, lag_error, const) %>%
     na.omit()
 
   if (nrow(data_cur) > 10) {
-    # GMM with Brent optimization using CUE
     res <- tryCatch({
       gmm(g = gmm_moments,
           x = data_cur,
@@ -225,9 +226,42 @@ print(p_vals)
 
 ```
 
+```{r transform excess returns}
+# Clean alpha names
+alphas_clean <- setNames(as.numeric(alphas), gsub("\\.Theta\\[1\\]", "", names(alphas)))
+
+df2 <- df1 %>%
+  group_by(Base) %>%
+  mutate(
+    transformed_excess = if (!Base[1] %in% names(alphas_clean)) {
+      NA_real_
+    } else {
+      alpha <- alphas_clean[[Base[1]]]
+      (alpha + (1 - 2 * alpha) * (excess < 0)) * abs(excess)^2
+    }
+  ) %>%
+  ungroup()
+
+simple2 <- df2 %>%
+    group_by(Base) %>%
+    do(tidy(lm(transformed_excess ~ prem, data = .))) %>%
+    ungroup()
+
+for (base in currencies){
+    cat("--------------", base , "--------------")
+    m <- lm(transformed_excess ~ prem, data = df2 %>% filter(Base == base))
+    cat("\n alpha:", round(coef(m)[1], 4), 
+        " | beta:", round(coef(m)[2], 4), "\n")
+    #print(coef(m))
+    print(linearHypothesis(m, "prem = 1"))
+}
 
 
-```{r quantile regression}
+```
+
+
+```{r initial qr}
+
 quantiles <- c(0.25, 0.5, 0.75, 0.9)
 qr_res <- data.frame()
 
@@ -262,6 +296,58 @@ for (base in currencies){
         " | z:", round(z, 2),
         " | p-value (H0: beta >= 1):", round(p, 4), "\n\n")
     }
+}
+```
+
+
+
+```{r quantile regression}
+# Assuming `alphas` is a named numeric vector like:
+# alphas <- c("CAD.Theta[1]" = 0.03, "EUR.Theta[1]" = 0.427, ...)
+
+
+qr_res_opt <- data.frame()
+
+for (base in currencies) {
+  cat("--------------", base , "--------------\n")
+  
+  d <- df1 %>% filter(Base == base)
+  
+  # Extract corresponding alpha (round name matching for robustness)
+  alpha_tau <- alphas[grep(base, names(alphas), ignore.case = TRUE)]
+  
+  if (length(alpha_tau) == 0) {
+    warning("No alpha found for base: ", base)
+    next
+  }
+  
+  tau <- as.numeric(alpha_tau)
+  cat("Quantile (alpha-derived): ", tau, "\n")
+  
+  # Run quantile regression at behaviourally motivated tau
+  q <- rq(excess ~ prem, data = d, tau = tau)
+  s <- summary(q, se = "boot", R = 500)
+  
+  coef_est <- s$coefficients["prem", "Value"]
+  coef_se <- s$coefficients["prem", "Std. Error"]
+  
+  # One-sided test: H0: beta >= 1, H1: beta < 1
+  z <- (coef_est - 1) / coef_se
+  p <- pnorm(z)
+  
+  qr_res_opt <- rbind(qr_res, data.frame(
+    Base = base,
+    Tau = tau,
+    Estimate = coef_est,
+    StdError = coef_se,
+    Z = z,
+    Pvalue = p
+  ))
+  
+  cat("  Estimate:", round(coef_est, 4), 
+      " | SE:", round(coef_se, 4),
+      " | z:", round(z, 2),
+      " | p-value (H0: beta >= 1):", round(p, 4), "\n\n")
 }
 
 

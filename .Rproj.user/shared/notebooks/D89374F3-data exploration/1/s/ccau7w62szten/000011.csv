@@ -1,0 +1,166 @@
+"0","for (base in currencies) {
+  cat(""--------------"", base , ""--------------\n"")
+  
+  d <- df1 %>% filter(Base == base)
+  
+  # Extract corresponding alpha (round name matching for robustness)
+  alpha_tau <- alphas[grep(base, names(alphas), ignore.case = TRUE)]
+  
+  if (length(alpha_tau) == 0) {
+    warning(""No alpha found for base: "", base)
+    next
+  }
+  
+  tau <- as.numeric(alpha_tau)
+  cat(""Quantile (alpha-derived): "", tau, ""\n"")
+  
+  # Run quantile regression at behaviourally motivated tau
+  q <- rq(excess ~ prem, data = d, tau = tau)
+  s <- summary(q, se = ""boot"", R = 500)
+  
+  coef_est <- s$coefficients[""prem"", ""Value""]
+  coef_se <- s$coefficients[""prem"", ""Std. Error""]
+  
+  # One-sided test: H0: beta >= 1, H1: beta < 1
+  z <- (coef_est - 1) / coef_se
+  p <- pnorm(z)
+  
+  qr_res_opt <- rbind(qr_res, data.frame(
+    Base = base,
+    Tau = tau,
+    Estimate = coef_est,
+    StdError = coef_se,
+    Z = z,
+    Pvalue = p
+  ))
+  
+  cat(""  Estimate:"", round(coef_est, 4), 
+      "" | SE:"", round(coef_se, 4),
+      "" | z:"", round(z, 2),
+      "" | p-value (H0: beta >= 1):"", round(p, 4), ""\n\n"")
+}
+"
+"1","--------------"
+"1"," "
+"1","GBP"
+"1"," "
+"1","--------------
+"
+"1","Quantile (alpha-derived): "
+"1"," "
+"1","0.6758801"
+"1"," "
+"1","
+"
+"1","  Estimate:"
+"1"," "
+"1","-0.5235"
+"1"," "
+"1"," | SE:"
+"1"," "
+"1","0.5823"
+"1"," "
+"1"," | z:"
+"1"," "
+"1","-2.62"
+"1"," "
+"1"," | p-value (H0: beta >= 1):"
+"1"," "
+"1","0.0044"
+"1"," "
+"1","
+
+"
+"1","--------------"
+"1"," "
+"1","EUR"
+"1"," "
+"1","--------------
+"
+"1","Quantile (alpha-derived): "
+"1"," "
+"1","0.4268985"
+"1"," "
+"1","
+"
+"1","  Estimate:"
+"1"," "
+"1","-0.8889"
+"1"," "
+"1"," | SE:"
+"1"," "
+"1","0.3356"
+"1"," "
+"1"," | z:"
+"1"," "
+"1","-5.63"
+"1"," "
+"1"," | p-value (H0: beta >= 1):"
+"1"," "
+"1","0"
+"1"," "
+"1","
+
+"
+"1","--------------"
+"1"," "
+"1","JPY"
+"1"," "
+"1","--------------
+"
+"1","Quantile (alpha-derived): "
+"1"," "
+"1","0.6707305"
+"1"," "
+"1","
+"
+"1","  Estimate:"
+"1"," "
+"1","-1.4537"
+"1"," "
+"1"," | SE:"
+"1"," "
+"1","0.3512"
+"1"," "
+"1"," | z:"
+"1"," "
+"1","-6.99"
+"1"," "
+"1"," | p-value (H0: beta >= 1):"
+"1"," "
+"1","0"
+"1"," "
+"1","
+
+"
+"1","--------------"
+"1"," "
+"1","CAD"
+"1"," "
+"1","--------------
+"
+"1","Quantile (alpha-derived): "
+"1"," "
+"1","0.02988115"
+"1"," "
+"1","
+"
+"1","  Estimate:"
+"1"," "
+"1","1.6541"
+"1"," "
+"1"," | SE:"
+"1"," "
+"1","1.5901"
+"1"," "
+"1"," | z:"
+"1"," "
+"1","0.41"
+"1"," "
+"1"," | p-value (H0: beta >= 1):"
+"1"," "
+"1","0.6596"
+"1"," "
+"1","
+
+"

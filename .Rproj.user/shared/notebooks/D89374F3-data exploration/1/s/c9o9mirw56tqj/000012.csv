@@ -1,8 +1,0 @@
-"0","ggplot(df1, aes(x = Date, y = prem)) +"
-"0","    geom_line(aes(color = Base)) +"
-"0","    labs(title = ""Forward Premiums"","
-"0","         x = ""Date"","
-"0","         y = ""Premium"") +"
-"0","    theme_minimal() +"
-"0","    scale_color_manual(values = c(""blue"", ""red"", ""green"", ""purple"")) +"
-"0","    theme(legend.position = ""bottom"")"
