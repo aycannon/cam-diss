@@ -149,163 +149,278 @@ ggplot(
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
+ggplot(simple %>% filter(grepl("_prem$", term)), aes(x = Currency, y = estimate)) +
+  geom_point() +
+  geom_errorbar(aes(ymin = estimate - 1.96 * std.error,
+                    ymax = estimate + 1.96 * std.error),
+                width = 0.02) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "grey") +
+  labs(title = "Simple Regression Estimates",
+       x = "Currency", y = "Estimate of β (prem)") +
+  theme_minimal()
+
 ```
 
 ### Estimating the asymmetric loss function
 
 ```{r estimating the loss functions}
-p <- 2
 
-gmm_moments <- function(theta, data) {
-  alpha <- theta[1]
-  e <- data$forecast_error
-  z <- as.matrix(data[, c("const", "lag_error")])
-  lambda <- alpha + (1 - 2 * alpha) * (e < 0)
-  g <- lambda * e^(p - 1) * z
-  return(g)
+estimate_a <- function(currencies, wide_data, p) {
+  # Define moment function inside for clarity/scope
+  gmm_moments <- function(theta, data) {
+    alpha <- theta[1]
+    e <- data$forecast_error
+    z <- as.matrix(data[, c("const", "lag_error")])
+    lambda <- alpha + (1 - 2 * alpha) * (e < 0)
+    g <- lambda * e^(p - 1) * z
+    return(g)
+  }
+
+  currency_results <- list()
+
+  for (cur in currencies) {
+    message("Running GMM for ", cur)
+
+    e_col <- cur
+    f_col <- paste0(cur, "_FWD")
+
+    data_cur <- wide_data %>%
+      transmute(
+        forecast_error = .data[[e_col]] - .data[[f_col]],
+        lag_error = lag(.data[[e_col]] - .data[[f_col]]),
+        const = 1
+      ) %>%
+      na.omit()
+
+    if (nrow(data_cur) > 10) {
+      res <- tryCatch({
+        gmm(g = gmm_moments,
+            x = data_cur,
+            t0 = c(0.5),
+            type = "cue",
+            method = "Brent",
+            lower = 0.01,
+            upper = 0.99)
+      }, error = function(e) NULL)
+
+      if (!is.null(res)) {
+        alpha_hat <- coef(res)
+        vcv_hat <- vcov(res)
+        se_alpha <- sqrt(vcv_hat[1, 1])
+        t_stat <- (alpha_hat - 0.5) / se_alpha
+        p_val <- 2 * pt(-abs(t_stat), df = nrow(data_cur) - 1)
+
+        currency_results[[cur]] <- list(
+          summary = summary(res),
+          alpha = alpha_hat,
+          vcov = vcv_hat,
+          t_stat = t_stat,
+          p_val = p_val
+        )
+      }
+    } else {
+      message("Not enough data for ", cur)
+    }
+  }
+
+  return(currency_results)
 }
 
+results2 <- estimate_a(currencies = c("GBP", "EUR", "CAD", "JPY"), wide_data = wide_data, p = 2)
+
+
+# View results for one example currency (e.g., EUR)
+results2$EUR
+results2$GBP
+results2$CAD
+results2$JPY
+
+
+# Extract alpha estimates
+alphas2 <- sapply(results2, function(x) if (!is.null(x)) x$alpha else NA)
+print(alphas2)
+
+# Extract p-values for H0: alpha = 0.5
+p_vals2 <- sapply(results2, function(x) if (!is.null(x)) x$p_val else NA)
+print(p_vals2)
+
+
+```
+
+```{r}
+# Step 1: Clean alpha names
+alphas_clean <- setNames(as.numeric(alphas2), gsub("\\.Theta\\[1\\]", "", names(alphas2)))
+
+# Step 2: Transform excess returns using loss function
+wide_transformed <- wide_data
+
 for (cur in currencies) {
-  message("Running GMM for ", cur)
+  excess_var <- paste0(cur, "_excess")
+  trans_var  <- paste0(cur, "_excess_trans")
 
-  # Get wide-format forecast error
-  e_col <- cur
-  f_col <- paste0(cur, "_FWD")
-  
-  data_cur <- wide_data %>%
-    transmute(
-      forecast_error = .data[[e_col]] - .data[[f_col]],
-      lag_error = lag(.data[[e_col]] - .data[[f_col]]),
-      const = 1
-    ) %>%
-    na.omit()
+  if (cur %in% names(alphas_clean)) {
+    alpha <- alphas_clean[[cur]]
 
-  if (nrow(data_cur) > 10) {
-    res <- tryCatch({
-      gmm(g = gmm_moments,
-          x = data_cur,
-          t0 = c(0.5),
-          type = "cue",
-          method = "Brent",
-          lower = 0.01,
-          upper = 0.99)
-    }, error = function(e) NULL)
-
-    if (!is.null(res)) {
-      alpha_hat <- coef(res)
-      vcv_hat <- vcov(res)
-      se_alpha <- sqrt(vcv_hat[1, 1])
-      t_stat <- (alpha_hat - 0.5) / se_alpha
-      p_val <- 2 * pt(-abs(t_stat), df = nrow(data_cur) - 1)
-
-      currency_results[[cur]] <- list(
-        summary = summary(res),
-        alpha = alpha_hat,
-        vcov = vcv_hat,
-        t_stat = t_stat,
-        p_val = p_val
-      )
-    }
+    e <- wide_transformed[[excess_var]]
+    wide_transformed[[trans_var]] <- (alpha + (1 - 2 * alpha) * (e < 0)) * abs(e)^2
   } else {
-    message("Not enough data for ", cur)
+    wide_transformed[[trans_var]] <- NA_real_
   }
 }
 
-# View results for one example currency (e.g., EUR)
-print(currency_results[["EUR"]]$summary)
-print(currency_results[["EUR"]]$t_stat)
-print(currency_results[["EUR"]]$p_val)
+simple2 <- purrr::map_dfr(currencies, function(cur) {
+  trans_var <- paste0(cur, "_excess_trans")
+  prem_var  <- paste0(cur, "_prem")
 
-# Extract alpha estimates
-alphas <- sapply(currency_results, function(x) if (!is.null(x)) x$alpha else NA)
-print(alphas)
+  df <- wide_transformed %>%
+    dplyr::select(all_of(c(trans_var, prem_var))) %>%
+    filter(!is.na(.data[[trans_var]]), !is.na(.data[[prem_var]]))
 
-# Extract p-values for H0: alpha = 0.5
-p_vals <- sapply(currency_results, function(x) if (!is.null(x)) x$p_val else NA)
-print(p_vals)
+  model <- lm(as.formula(paste0(trans_var, " ~ ", prem_var)), data = df)
+  tidy(model) %>% mutate(Currency = cur)
+})
+
+# Step 4: Print results with hypothesis tests
+for (cur in currencies) {
+  cat("--------------", cur , "--------------\n")
+
+  trans_var <- paste0(cur, "_excess_trans")
+  prem_var  <- paste0(cur, "_prem")
+
+  df <- wide_transformed %>%
+    dplyr::select(all_of(c(trans_var, prem_var))) %>%
+    filter(!is.na(.data[[trans_var]]), !is.na(.data[[prem_var]]))
+
+  m <- lm(as.formula(paste0(trans_var, " ~ ", prem_var)), data = df)
+
+  cat("  alpha:", round(coef(m)[1], 4), 
+      " | beta:", round(coef(m)[2], 4), "\n")
+
+  print(summary(m))
+}
 
 ```
 
-```{r transform excess returns}
-# Clean alpha names
-alphas_clean <- setNames(as.numeric(alphas), gsub("\\.Theta\\[1\\]", "", names(alphas)))
 
-df2 <- df1 %>%
-  group_by(Base) %>%
-  mutate(
-    transformed_excess = if (!Base[1] %in% names(alphas_clean)) {
-      NA_real_
-    } else {
-      alpha <- alphas_clean[[Base[1]]]
-      (alpha + (1 - 2 * alpha) * (excess < 0)) * abs(excess)^2
-    }
-  ) %>%
+```{r just checking residuals}
+resid_data <- list()
+for (cur in currencies) {
+  excess_var <- paste0(cur, "_excess")
+  prem_var   <- paste0(cur, "_prem")
+  
+  df <- wide_data %>%
+    dplyr::select(all_of(c(excess_var, prem_var))) %>%
+    filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]]))
+  
+  # Fit linear model and extract residuals
+  model <- lm(as.formula(paste0(excess_var, " ~ ", prem_var)), data = df)
+  residuals_df <- tibble(
+    Currency = cur,
+    Residual = residuals(model),
+    Mean = mean(residuals(model)),
+    SD = sd(residuals(model))
+  )
+  
+  resid_data[[cur]] <- residuals_df
+}
+
+# Combine all residuals
+resid_plot_df <- bind_rows(resid_data)
+
+means_sds <- resid_plot_df %>%
+  group_by(Currency) %>%
+  summarise(Mean = unique(Mean), SD = unique(SD), .groups = "drop")
+
+normal_curves <- means_sds %>%
+  mutate(x = map2(Mean, SD, ~ seq(.x - 4*.y, .x + 4*.y, length.out = 200))) %>%
+  unnest(cols = c(x)) %>%
+  mutate(y = dnorm(x, mean = Mean, sd = SD))
+
+# Now plot
+ggplot(resid_plot_df, aes(x = Residual)) +
+  geom_density(color = "darkred", linewidth = 1, fill = "darkred", alpha = 0.5) +
+  geom_line(data = normal_curves, aes(x = x, y = y), color = "blue", linetype = "dashed", linewidth = 0.5, alpha = 0.9) +
+  facet_wrap(~ Currency, scales = "free") +
+  theme_minimal() +
+  labs(title = "Prediction Error Densities vs Fitted Normal Distribution",
+       x = "Residual",
+       y = "Density")
+
+```
+
+
+```{r quantile regressions}
+
+fixed_quantiles <- c(0.1, 0.25, 0.5, 0.75, 0.9)
+quantiles_by_currency <- setNames(as.numeric(alphas2), gsub("\\.Theta\\[1\\]", "", names(alphas2)))
+currencies <- names(quantiles_by_currency)
+
+# Store results
+qr_results <- list()
+
+# Loop over currencies
+for (cur in currencies) {
+  tau_vec <- sort(unique(c(quantiles_by_currency[[cur]], fixed_quantiles)))
+  excess_var <- paste0(cur, "_excess")
+  prem_var   <- paste0(cur, "_prem")
+  
+  df <- wide_data %>%
+    dplyr::select(all_of(c(excess_var, prem_var))) %>%
+    filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]])) %>%
+    rename(excess = all_of(excess_var), prem = all_of(prem_var))
+  
+  for (tau in tau_vec) {
+    fit <- rq(excess ~ prem, tau = tau, data = df)
+    preds <- predict(fit, newdata = df)
+    err <- df$excess - preds
+    
+    qr_results[[length(qr_results) + 1]] <- tibble(
+      Currency = cur,
+      Tau = tau,
+      Estimate = coef(fit)["prem"],
+      SD = summary(fit)$coefficients["prem", "Std. Error"],
+      MAE = mean(abs(err)),
+      RMSE = sqrt(mean(err^2))
+    )
+  }
+}
+
+# Combine and inspect
+qr_df <- bind_rows(qr_results)
+qr_df <- qr_df %>% arrange(Currency, Tau) %>% drop_na() %>% distinct()
+print(qr_df)
+
+highlight_df <- qr_df %>%
+  group_by(Currency) %>%
+  filter(abs(Tau - quantiles_by_currency[Currency]) < 1e-6) %>%
   ungroup()
 
-simple2 <- df2 %>%
-    group_by(Base) %>%
-    do(tidy(lm(transformed_excess ~ prem, data = .))) %>%
-    ungroup()
+ggplot(qr_df, aes(x = Tau, y = MAE, color = Currency)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+    geom_point(data = highlight_df,
+             aes(x = Tau, y = MAE, color = Currency),
+             shape = 21, size = 4, stroke = 1.5, fill = NA) +
+  labs(title = "Quantile Regression Forecast Error by τ",
+       x = "Quantile (τ)",
+       y = "Mean Absolute Error (MAE)") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 
-for (base in currencies){
-    cat("--------------", base , "--------------")
-    m <- lm(transformed_excess ~ prem, data = df2 %>% filter(Base == base))
-    cat("\n alpha:", round(coef(m)[1], 4), 
-        " | beta:", round(coef(m)[2], 4), "\n")
-    #print(coef(m))
-    print(linearHypothesis(m, "prem = 1"))
-}
-
+ggplot(qr_df, aes(x = Tau, y = Estimate, color = Currency)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
+  labs(title = "Quantile Regression Coefficients by τ",
+       x = "Quantile (τ)",
+       y = expression(beta~"Estimate")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
 
 ```
-
-
-```{r initial qr}
-
-quantiles <- c(0.25, 0.5, 0.75, 0.9)
-qr_res <- data.frame()
-
-for (base in currencies){
-    cat("--------------", base , "--------------")
-    d <- df1 %>% filter(Base == base)
-    
-    for (tau in quantiles){
-    cat("\nQuantile: ", tau, "\n")
-    q <- rq(excess ~ prem, data = d, tau = tau)
-    s <- summary(q, se = "boot", R = 500)
-    
-    coef_est <- s$coefficients["prem", "Value"]
-    coef_se <- s$coefficients["prem", "Std. Error"]
-    
-    
-    # One sided test: H0: beta >= 1, H1: beta < 1
-    z <- (coef_est - 1) / coef_se
-    p <- pnorm(z)
-    
-    qr_res <- rbind(qr_res, data.frame(
-      Base = base,
-      Tau = tau,
-      Estimate = coef_est,
-      StdError = coef_se,
-      Z = z,
-      Pvalue = p
-    ))
-    
-    cat("  Estimate:", round(coef_est, 4), 
-        " | SE:", round(coef_se, 4),
-        " | z:", round(z, 2),
-        " | p-value (H0: beta >= 1):", round(p, 4), "\n\n")
-    }
-}
-```
-
 
 
 ```{r quantile regression}
-# Assuming `alphas` is a named numeric vector like:
-# alphas <- c("CAD.Theta[1]" = 0.03, "EUR.Theta[1]" = 0.427, ...)
-
-
 qr_res_opt <- data.frame()
 
 for (base in currencies) {
@@ -349,21 +464,29 @@ for (base in currencies) {
       " | z:", round(z, 2),
       " | p-value (H0: beta >= 1):", round(p, 4), "\n\n")
 }
-
-
 ```
 
+
+
 ```{r}
-ggplot(qr_res, aes(x = Tau, y = Estimate, color = Base)) +
-  geom_line() +
-  geom_point() +
-  geom_errorbar(aes(ymin = Estimate - 1.96 * StdError,
-                    ymax = Estimate + 1.96 * StdError),
-                width = 0.02) +
-  geom_hline(yintercept = 1, linetype = "dashed", color = "grey") +
-  labs(title = "Quantile Regression Estimates of Forward Premium Coefficient",
-       x = "Quantile (τ)", y = "Estimate of β (prem)") +
-  theme_minimal()
+ggplot(qr_df, aes(x = Tau, y = Estimate)) +
+  geom_point(color = "steelblue", size = 2) +
+  geom_errorbar(aes(ymin = Estimate - SD, ymax = Estimate + SD),
+                width = 0.02, color = "steelblue", linewidth = 0.6) +
+  geom_line(color = "steelblue") +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
+    geom_point(data = highlight_df,
+             aes(x = Tau, y = Estimate),
+             shape = 21, size = 4, stroke = 1, fill = NA) +
+  facet_wrap(~ Currency, scales = "free_y") +
+  labs(title = "Quantile Regression Coefficients by τ",
+       x = "Quantile (τ)",
+       y = expression(beta~"Estimate")) +
+  theme_minimal() +
+  theme(strip.text = element_text(size = 12),
+        legend.position = "none")
+
+
 
 ```
 
