@@ -272,30 +272,15 @@ for (base in currencies) {
 So we have found recreated some of the results. We see that in the case of Canada, the result is not statistically different from 1, but in the case of the other currencies, we see that the forward premium is statistically significantly different from 1. This is consistent with the findings in the literature.
 
 ```{r plot of coefficients from simple regression}
-ggplot(
-  simple %>% filter(grepl("_prem$", term)),
-  aes(x = Currency, y = estimate)
-) +
-  geom_pointrange(aes(ymin = estimate - std.error, ymax = estimate + std.error),
-                  position = position_dodge(width = 0.5), 
-                  color = "steelblue") +
-  geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
-  labs(title = "Forward Premium Coefficients",
-       x = "Currency",
-       y = expression(beta~"Estimate")) +
-  theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-
-ggplot(simple %>% filter(grepl("_prem$", term)), aes(x = Currency, y = estimate)) +
+ggplot(lmresults_df, aes(x = Currency, y = Slope)) +
   geom_point() +
-  geom_errorbar(aes(ymin = estimate - 1.96 * std.error,
-                    ymax = estimate + 1.96 * std.error),
-                width = 0.02) +
+  geom_errorbar(aes(ymin = Slope - 1.96 * SE.Slope,
+                    ymax = Slope + 1.96 * SE.Slope),
+                width = 0.1) +
   geom_hline(yintercept = 1, linetype = "dashed", color = "grey") +
   labs(title = "Simple Regression Estimates",
-       x = "Currency", y = "Estimate of β (prem)") +
+       x = "Currency", y = expression(hat(beta) ~ "(on forward premium)")) +
   theme_minimal()
-
 ```
 
 ### Estimating the asymmetric loss function
@@ -363,7 +348,7 @@ estimate_a <- function(currencies, wide_data, p) {
   return(currency_results)
 }
 
-results2 <- estimate_a(currencies = c("GBP", "EUR", "CAD", "JPY"), wide_data = wide_data, p = 2)
+results2 <- estimate_a(currencies = currencies, wide_data = wide_data, p = 2)
 
 
 # View results for one example currency (e.g., EUR)
@@ -384,7 +369,7 @@ print(p_vals2)
 
 ```
 
-```{r}
+```{r transformed excess returns lm}
 # Step 1: Clean alpha names
 alphas_clean <- setNames(as.numeric(alphas2), gsub("\\.Theta\\[1\\]", "", names(alphas2)))
 
