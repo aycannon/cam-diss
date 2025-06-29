@@ -1,0 +1,32 @@
+"0","install.packages(""expectreg_0.53.tar.gz"", repos = NULL, type = ""source"")
+"
+"2","* installing *source* package ‘expectreg’ ...
+"
+"2","** package ‘expectreg’ successfully unpacked and MD5 sums checked
+"
+"2","** using staged installation
+"
+"2","** libs
+"
+"2","using C++ compiler: ‘Apple clang version 16.0.0 (clang-1600.0.26.6)’
+"
+"2","using SDK: ‘MacOSX15.2.sdk’
+"
+"1","clang++ -arch arm64 -std=gnu++17 -I""/Library/Frameworks/R.framework/Resources/include"" -DNDEBUG  -I'/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/Rcpp/include' -I'/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include' -I/opt/R/arm64/include    -fPIC  -falign-functions=64 -Wall -g -O2   -c RcppExports.cpp -o RcppExports.o
+"
+"2","In file included from "
+"2","RcppExports.cpp:4:
+In file included from /Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/RcppEigen.h:25:
+/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/RcppEigenForward.h:25:10: fatal error: 'iterator' file not found
+   25 | #include <iterator>
+      |          ^~~~~~~~~~
+"
+"2","1"
+"2"," error generated.
+"
+"2","make: *** [RcppExports.o] Error 1
+"
+"2","ERROR: compilation failed for package ‘expectreg’
+"
+"2","* removing ‘/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/expectreg’
+"

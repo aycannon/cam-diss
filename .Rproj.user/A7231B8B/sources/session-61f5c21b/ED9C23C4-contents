@@ -7,22 +7,25 @@ output: html_document
 
 ```{r preamble, include=FALSE, message=FALSE, warning=FALSE}
 source("preamble.R")
+
+expectregurl <- "https://cran.r-project.org/src/contrib/Archive/expectreg/expectreg_0.53.tar.gz"
+# install.packages(expectregurl, repos=NULL, type="source")
 ```
 
 
-```{r Data Import}
+```{r Data Import, attr.message=FALSE, warning=FALSE, message=FALSE}
 df <- read_xlsx("data/data1.xlsx")
 dt <- as.data.table(df)
 ```
 
 ```{r wide format}
 data <- df %>%
-    mutate(Base = gsub("=", "", Inst))
+    mutate(Base = gsub("=", "", Instrument))
 
 wide <- data %>%
     distinct() %>% # there are duplicates, but they are perfect duplicates so we take the distinct values
-    dplyr::select(Base, Date, Mid) %>%
-    pivot_wider(names_from = Base, values_from = Mid) %>%
+    dplyr::select(Base, Date, "Mid Price") %>%
+    pivot_wider(names_from = Base, values_from = "Mid Price") %>%
     arrange(Date) %>%
     mutate(across(-Date, log))
 # everything has been logged as we work in log(spot) and log(forward)
@@ -52,16 +55,6 @@ wide_data <- wide %>%
 
 ```
 
-
-
-```{r initial regressions}
-lm(GBP_excess ~ GBP_prem, data = wide_data) %>% summary()
-lm(EUR_excess ~ EUR_prem, data = wide_data) %>% summary()
-lm(JPY_excess ~ JPY_prem, data = wide_data) %>% summary()
-lm(CAD_excess ~ CAD_prem, data = wide_data) %>% summary()
-```
-
-
 ```{r data vis}
 
 long_spot <- wide %>%
@@ -89,6 +82,150 @@ ggplot(long_prem, aes(x = Date, y = Prem)) +
     theme_minimal() +
     scale_color_manual(values = c("blue", "red", "green", "purple")) +
     theme(legend.position = "bottom")
+```
+
+```{r Linear Model}
+lm_data <- list()
+for (cur in currencies) {
+  excess_var <- paste0(cur, "_excess")
+  prem_var   <- paste0(cur, "_prem")
+  
+  df <- wide_data %>%
+    dplyr::select(all_of(c(excess_var, prem_var))) %>%
+    filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]]))
+  
+  model <- lm(as.formula(paste0(excess_var, " ~ ", prem_var)), data = df)
+
+  summary_stats <- tibble(
+    Currency   = cur,
+    Intercept  = coef(model)[1],
+    SE.Intercept = summary(model)$coefficients[1, 2],
+    Slope      = coef(model)[2],
+    SE.Slope   = summary(model)$coefficients[2, 2],
+    R2         = summary(model)$r.squared,
+    N          = nobs(model)
+  )
+  
+  fitted_df <- tibble(
+    Currency = cur,
+    Fitted   = fitted(model),
+    Residual = resid(model)
+  )
+  
+  lm_data[[cur]] <- list(summary = summary_stats, residuals = fitted_df)
+}
+
+
+lmresults_df <- bind_rows(list(lm_data$GBP$summary, lm_data$EUR$summary, lm_data$CAD$summary, lm_data$JPY$summary))
+print(lmresults_df)
+
+```
+
+
+```{r Checking for autocorrelation in the errors}
+for (cur in currencies) {
+    cat("------", cur, "------\n")
+  model <- lm(as.formula(paste0(cur, "_excess ~ ", cur, "_prem")), data = wide_data)
+  print(cur)
+  print(Box.test(resid(model), lag = 22, type = "Ljung-Box"))
+}
+
+par(mfrow = c(2, 2))  # 2x2 grid for 4 plots
+for (cur in currencies) {
+  model <- lm(as.formula(paste0(cur, "_excess ~ ", cur, "_prem")), data = wide_data)
+  res <- resid(model)
+  acf(res, lag.max = 40, main = paste("ACF of Residuals:", cur))
+}
+
+```
+
+```{r}
+library(forecast)
+
+for (cur in currencies) {
+  excess_var <- paste0(cur, "_excess")
+  prem_var   <- paste0(cur, "_prem")
+
+  df <- wide_data %>%
+    dplyr::select(all_of(c(excess_var, prem_var))) %>%
+    dplyr::filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]]))
+
+  model <- lm(as.formula(paste0(excess_var, " ~ ", prem_var)), data = df)
+  res <- resid(model)
+
+  cat("-----", cur, "-----\n")
+  auto_model <- auto.arima(res, max.p = 0, max.q = 30, seasonal = FALSE, ic = "bic")
+  print(auto_model)
+}
+
+```
+
+```{r Newey-West Standard Errors - everything insig}
+
+lmnw_data <- list()
+for (cur in currencies) {
+  excess_var <- paste0(cur, "_excess")
+  prem_var   <- paste0(cur, "_prem")
+  
+  df <- wide_data %>%
+    dplyr::select(all_of(c(excess_var, prem_var))) %>%
+    filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]]))
+  
+  model <- lm(as.formula(paste0(excess_var, " ~ ", prem_var)), data = df)
+  nw_vcov <- NeweyWest(model, lag = 14, prewhite = FALSE)
+  nw_se <- coeftest(model, vcov. = nw_vcov)
+
+  summary_stats <- tibble(
+    Currency   = cur,
+    Intercept  = coef(model)[1],
+    SE.Intercept = nw_se[1, "Std. Error"],
+    Slope      = coef(model)[2],
+    SE.Slope   = nw_se[2, "Std. Error"],
+    R2         = summary(model)$r.squared,
+    N          = nobs(model)
+  )
+  
+  fitted_df <- tibble(
+    Currency = cur,
+    Fitted   = fitted(model),
+    Residual = resid(model)
+  )
+  
+  lmnw_data[[cur]] <- list(summary = summary_stats, residuals = fitted_df)
+}
+lmnwresults_df <- bind_rows(list(lmnw_data$GBP$summary, lmnw_data$EUR$summary, lmnw_data$CAD$summary, lmnw_data$JPY$summary))
+print(lmnwresults_df)
+
+```
+
+
+```{r Plotting lm Residuals}
+
+# Combine all residuals
+resid_plot_df <- bind_rows(list(lm_data$GBP$residuals,
+                           lm_data$EUR$residuals,
+                           lm_data$CAD$residuals,
+                           lm_data$JPY$residuals))
+
+means_sds <- resid_plot_df %>%
+  group_by(Currency) %>%
+  summarise(Mean = unique(Mean), SD = unique(SD), .groups = "drop")
+
+normal_curves <- means_sds %>%
+  mutate(x = map2(Mean, SD, ~ seq(.x - 4*.y, .x + 4*.y, length.out = 200))) %>%
+  unnest(cols = c(x)) %>%
+  mutate(y = dnorm(x, mean = Mean, sd = SD))
+
+# Now plot
+ggplot(resid_plot_df, aes(x = Residual)) +
+  geom_density(color = "darkred", linewidth = 1, fill = "darkred", alpha = 0.5) +
+  geom_line(data = normal_curves, aes(x = x, y = y), color = "blue", linetype = "dashed", linewidth = 0.5, alpha = 0.9) +
+  facet_wrap(~ Currency, scales = "free") +
+  theme_minimal() +
+  labs(title = "Prediction Error Densities vs Fitted Normal Distribution",
+       x = "Residual",
+       y = "Density")
+
 ```
 
 
@@ -302,51 +439,7 @@ for (cur in currencies) {
 ```
 
 
-```{r just checking residuals}
-resid_data <- list()
-for (cur in currencies) {
-  excess_var <- paste0(cur, "_excess")
-  prem_var   <- paste0(cur, "_prem")
-  
-  df <- wide_data %>%
-    dplyr::select(all_of(c(excess_var, prem_var))) %>%
-    filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]]))
-  
-  # Fit linear model and extract residuals
-  model <- lm(as.formula(paste0(excess_var, " ~ ", prem_var)), data = df)
-  residuals_df <- tibble(
-    Currency = cur,
-    Residual = residuals(model),
-    Mean = mean(residuals(model)),
-    SD = sd(residuals(model))
-  )
-  
-  resid_data[[cur]] <- residuals_df
-}
 
-# Combine all residuals
-resid_plot_df <- bind_rows(resid_data)
-
-means_sds <- resid_plot_df %>%
-  group_by(Currency) %>%
-  summarise(Mean = unique(Mean), SD = unique(SD), .groups = "drop")
-
-normal_curves <- means_sds %>%
-  mutate(x = map2(Mean, SD, ~ seq(.x - 4*.y, .x + 4*.y, length.out = 200))) %>%
-  unnest(cols = c(x)) %>%
-  mutate(y = dnorm(x, mean = Mean, sd = SD))
-
-# Now plot
-ggplot(resid_plot_df, aes(x = Residual)) +
-  geom_density(color = "darkred", linewidth = 1, fill = "darkred", alpha = 0.5) +
-  geom_line(data = normal_curves, aes(x = x, y = y), color = "blue", linetype = "dashed", linewidth = 0.5, alpha = 0.9) +
-  facet_wrap(~ Currency, scales = "free") +
-  theme_minimal() +
-  labs(title = "Prediction Error Densities vs Fitted Normal Distribution",
-       x = "Residual",
-       y = "Density")
-
-```
 
 
 ```{r Expectile Regression Function}
@@ -479,7 +572,185 @@ print(j_df)
 
 
 ```{r}
-install.packages("expectreg_0.53.tar.gz", repos = NULL, type = "source")
+# install.packages(c("mboost", "BayesX", "fields"))
+# install.packages("expectreg_0.53.tar.gz", repos = NULL, type = "source")
+```
+
+```{r Expectile based on package code}
+expectile_regression_laws <- function(X, y, tau = 0.5, max_iter = 50, tol = 1e-6) {
+  X <- as.matrix(X)
+  n <- nrow(X)
+  
+  # Add intercept
+  X <- cbind(1, X)
+  
+  # Initialize coefficients
+  beta <- rep(0, ncol(X))
+  
+  for (i in 1:max_iter) {
+    y_hat <- X %*% beta
+    residuals <- y - y_hat
+    
+    weights <- ifelse(residuals >= 0, tau, 1 - tau)
+    W <- diag(as.vector(weights))
+    
+    # Weighted least squares update
+    beta_new <- solve(t(X) %*% W %*% X) %*% t(X) %*% W %*% y
+    
+    # Check convergence
+    if (max(abs(beta_new - beta)) < tol) break
+    beta <- beta_new
+  }
+  
+  list(coefficients = beta, fitted = X %*% beta, residuals = y - X %*% beta)
+}
+
+```
+
+```{r}
+# Suppose you want expectile regression for GBP
+df_test <- wide_data %>%
+  dplyr::select(GBP_excess, GBP_prem) %>%
+  filter(!is.na(GBP_excess), !is.na(GBP_prem))
+
+result <- expectile_regression_laws(X = df_test$GBP_prem, y = df_test$GBP_excess, tau = 0.3087742)
+
+# Coefficients
+print(result$coefficients)
+
+# Plot fitted vs actual
+plot(df_test$GBP_excess, result$fitted, 
+     xlab = "Actual", ylab = "Fitted", main = "Expectile Regression (tau = 0.25)") +
+abline(a = 0, b = 1, col = "red", lty = 2)
+
+```
+
+```{r Expectile Regression with fixed alphas}
+fixed_expectiles <- c(0.1, 0.25, 0.5, 0.75, 0.9)
+expectiles_by_currency <- setNames(as.numeric(alphas2), gsub("\\.Theta\\[1\\]", "", names(alphas2)))
+currencies <- names(expectiles_by_currency)
+
+# Store expectile regression results
+er_results <- list()
+
+for (cur in currencies) {
+    cat("--------------", cur , "--------------\n")
+  tau_vec <- sort(unique(c(expectiles_by_currency[[cur]], fixed_expectiles)))
+  excess_var <- paste0(cur, "_excess")
+  prem_var   <- paste0(cur, "_prem")
+  
+  df <- wide_data %>%
+    dplyr::select(all_of(c(excess_var, prem_var))) %>%
+    filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]])) %>%
+    rename(y = all_of(excess_var), x = all_of(prem_var))
+  
+  X <- as.matrix(df$x)
+  y <- df$y
+
+  for (tau in tau_vec) {
+      cat("tau: ", tau, "\n")
+    fit <- expectile_regression(X, y, tau = tau)
+    print(summary(fit))
+    preds <- fit$fitted.values
+    err <- y - preds
+
+    er_results[[length(er_results) + 1]] <- list(
+  Currency = cur,
+  Tau = tau,
+  Coef = fit$coefficients,
+  Fitted = preds,
+  Residuals = err,
+  Metrics = tibble(
+    Estimate = fit$coefficients[2],
+    MAE = mean(abs(err)),
+    RMSE = sqrt(mean(err^2)),
+    AssymetricLoss = mean((tau + (1 - 2 * tau) * (err < 0)) * err^2)
+  )
+)
+
+  }
+}
+
+# Combine results into a single dataframe
+er_df <- bind_rows(lapply(er_results, function(x) {
+  tibble(
+    Currency = x$Currency,
+    Tau = x$Tau,
+    Estimate = x$Metrics$Estimate,
+    MAE = x$Metrics$MAE,
+    RMSE = x$Metrics$RMSE
+  )
+})) %>%
+  arrange(Currency, Tau) %>%
+  drop_na() %>%
+  distinct()
+
+
+# Highlight the optimal tau
+highlight_er <- er_df %>%
+  group_by(Currency) %>%
+  filter(abs(Tau - expectiles_by_currency[Currency]) < 1e-6) %>%
+  ungroup()
+
+# Plot forecast error
+ggplot(er_df, aes(x = Tau, y = MAE, color = Currency)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  geom_point(data = highlight_er, shape = 21, size = 4, stroke = 1.5, fill = NA) +
+  labs(title = "Expectile Regression Forecast Error by τ",
+       x = "Expectile (τ)",
+       y = "Mean Absolute Error (MAE)") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+# Plot expectile slope estimates
+ggplot(er_df, aes(x = Tau, y = Estimate, color = Currency)) +
+  geom_line(linewidth = 1) +
+  geom_point(size = 2) +
+  geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
+  labs(title = "Expectile Regression Coefficients by τ",
+       x = "Expectile (τ)",
+       y = expression(beta~"Estimate")) +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+
+```
+
+```{r}
+plot_expectiles <- function(df, expectile_fits, taus, currency = "GBP") {
+  plot(df$x, df$y,
+       main = paste("Expectile Regressions for", currency),
+       xlab = "Forward Premium",
+       ylab = "Excess Return",
+       col = "grey70", pch = 16)
+
+  cols <- hcl.colors(length(taus), "Dark 3")
+
+  for (i in seq_along(taus)) {
+    beta <- expectile_fits[[i]]$coefficients
+    abline(a = beta[1], b = beta[2], col = cols[i], lwd = 2)
+  }
+
+  legend("topleft", legend = paste0("τ = ", taus),
+         col = cols, lwd = 2, bty = "n")
+}
+
+# For a single currency
+cur <- "GBP"
+taus <- c(0.1, 0.25, 0.5, 0.75, 0.9)
+fits <- list()
+df <- wide_data %>%
+  dplyr::select(GBP_excess, GBP_prem) %>%
+  filter(!is.na(GBP_excess), !is.na(GBP_prem)) %>%
+  rename(y = GBP_excess, x = GBP_prem)
+
+for (tau in taus) {
+  fits[[length(fits) + 1]] <- expectile_regression(X = as.matrix(df$x), y = df$y, tau = tau)
+}
+
+plot_expectiles(df, fits, taus, currency = "GBP")
+
+
 ```
 
 
@@ -753,5 +1024,228 @@ plot_value_function()
 ```
 
 
+# Deep Parametric Porfolio Policy
+Given we have these alphas that we are estimating we can see that based on the forward rates, some currencies are systematically under-/over- predicted. We aim to utilise this fact and optimise portfolio allocation based on these utiltiy asymmetries calculated on a rolling basis.
 
+```{r Sim data}
+currs <- c("GBP", "EUR", "JPY", "CAD")
+n <- nrow(wide_data)
+
+simulate_macro <- function(base, vol, n) {
+  rnorm(n, mean = base, sd = vol)
+}
+
+wide_data2 <- wide_data %>%
+  mutate(
+    int_US = simulate_macro(0.015, 0.002, n),
+    inf_US = simulate_macro(0.02,  0.002, n),
+    gdp_US = simulate_macro(0.025, 0.003, n)
+  )
+
+# Simulate for each currency and compute differentials
+for (ccy in currs) {
+  wide_data2[[paste0("int_", ccy)]] <- simulate_macro(0.02, 0.0025, n)
+  wide_data2[[paste0("inf_", ccy)]] <- simulate_macro(0.025, 0.0025, n)
+  wide_data2[[paste0("gdp_", ccy)]] <- simulate_macro(0.03, 0.003, n)
+  
+  # Compute differentials
+  wide_data2[[paste0("int_diff_", ccy)]] <- wide_data2[[paste0("int_", ccy)]] - wide_data2$int_US
+  wide_data2[[paste0("inf_diff_", ccy)]] <- wide_data2[[paste0("inf_", ccy)]] - wide_data2$inf_US
+  wide_data2[[paste0("gdp_diff_", ccy)]] <- wide_data2[[paste0("gdp_", ccy)]] - wide_data2$gdp_US
+}
+
+```
+
+
+```{r D-PPP Trading Strategy}
+library(keras)
+library(tensorflow)
+
+
+# -------- 0. User inputs --------
+# wide_data: Must contain Date, for each currency: XX_excess, XX_FWD, and macro features
+# currencies: e.g. c("GBP", "EUR", "JPY", "CAD")
+# window: size of rolling GMM window (in months)
+# p: power for loss (1 = lin-lin, 2 = quad-quad)
+
+currencies <- c("GBP","EUR","JPY","CAD")  # <-- user-defined
+window <- 60   # e.g. 5 years of monthly data
+p <- 2         # quad-quad loss
+macro_prefixes <- c() # (optional) if you want to filter macro features by prefix, e.g. c("infl_", "gdp_")
+
+# -------- 1. Identify Macro Features Automatically --------
+exclude_patterns <- c("_excess$", "_FWD$", "^Date$", "^date$", "^const$", "^lag_")
+macro_features <- names(wide_data)
+for (pat in exclude_patterns) {
+  macro_features <- macro_features[!grepl(pat, macro_features)]
+}
+if (length(macro_prefixes) > 0) {
+  macro_features <- macro_features[grepl(paste(macro_prefixes, collapse="|"), macro_features)]
+}
+# Remove any duplicated names just in case
+macro_features <- unique(macro_features)
+
+# -------- 2. Rolling GMM Alpha Estimation (Elliott et al. 2006) --------
+roll_alpha_gmm <- function(data, currencies, window = 60, p = 2) {
+  n <- nrow(data)
+  date_seq <- data$Date[(window + 1):n]
+  alpha_matrix <- matrix(NA, nrow = length(date_seq), ncol = length(currencies),
+                         dimnames = list(as.character(date_seq), currencies))
+  for (i in seq_along(date_seq)) {
+    idx_start <- i
+    idx_end <- i + window - 1
+    sub_data <- data[idx_start:idx_end, ]
+    for (cur in currencies) {
+      e_col <- paste0(cur, "_excess")
+      f_col <- paste0(cur, "_FWD")
+      dat_cur <- sub_data %>%
+        transmute(
+          forecast_error = .data[[e_col]] - .data[[f_col]],
+          lag_error = lag(.data[[e_col]] - .data[[f_col]]),
+          const = 1
+        ) %>% na.omit()
+      if (nrow(dat_cur) > 10) {
+        gmm_moments <- function(theta, data) {
+          alpha <- theta[1]
+          e <- data$forecast_error
+          z <- as.matrix(data[, c("const", "lag_error")])
+          lambda <- alpha + (1 - 2 * alpha) * (e < 0)
+          g <- lambda * e^(p - 1) * z
+          return(g)
+        }
+        res <- tryCatch({
+          gmm(g = gmm_moments, x = dat_cur, t0 = c(0.5),
+              type = "cue", method = "Brent", lower = 0.01, upper = 0.99)
+        }, error = function(e) NULL)
+        alpha_matrix[i, cur] <- if (!is.null(res)) coef(res)[1] else NA
+      }
+    }
+  }
+  alpha_matrix
+}
+
+alpha_matrix <- roll_alpha_gmm(wide_data, currencies, window = window, p = p)
+date_seq <- as.Date(rownames(alpha_matrix))
+n_steps <- length(date_seq)
+N_assets <- length(currencies)
+
+# -------- 3. Build Features and Target Arrays for Neural Net --------
+F_feats <- length(macro_features) + 2  # fwd prem + alpha + all macro features
+
+X_feats <- array(NA_real_, dim = c(n_steps, N_assets, F_feats),
+                 dimnames = list(time = as.character(date_seq), asset = currencies,
+                                 feature = c("fwd_prem", macro_features, "alpha")))
+R_next  <- matrix(NA_real_, nrow = n_steps, ncol = N_assets, dimnames = list(as.character(date_seq), currencies))
+
+for (i in seq_len(n_steps)) {
+  t <- date_seq[i]
+  t1 <- t %m+% months(1)
+  row <- wide_data %>% filter(Date == t)
+  next_row <- wide_data %>% filter(Date == t1)
+  for (j in seq_along(currencies)) {
+    cur <- currencies[j]
+    fwd_prem <- if (!is.null(row[[paste0(cur, "_FWD")]]) & !is.null(row[[paste0(cur, "_excess")]])) {
+      row[[paste0(cur, "_FWD")]] - row[[paste0(cur, "_excess")]]
+    } else { NA_real_ }
+    macro_vals <- as.numeric(row[1, macro_features, drop = FALSE])
+    alpha_val <- alpha_matrix[i, cur]
+    X_feats[i, j, ] <- c(fwd_prem, macro_vals, alpha_val)
+    R_next[i, j] <- if (nrow(next_row) > 0) next_row[[paste0(cur, "_excess")]] else NA
+  }
+}
+
+# Remove rows where all R_next are NA (no returns to predict)
+valid_idx <- which(!apply(is.na(R_next), 1, all))
+X_feats_final     <- X_feats[valid_idx, , , drop = FALSE]
+R_next_final      <- R_next[valid_idx, , drop = FALSE]
+train_dates_final <- date_seq[valid_idx]
+
+# Optional: Remove rows where ANY macro feature is NA
+good_rows <- sapply(seq_len(dim(X_feats_final)[1]), function(i) !any(is.na(X_feats_final[i, , ])))
+X_feats_final     <- X_feats_final[good_rows, , , drop = FALSE]
+R_next_final      <- R_next_final[good_rows, , drop = FALSE]
+train_dates_final <- train_dates_final[good_rows]
+
+# -------- 4. Keras Deep PPP Model Definition --------
+F_feats <- dim(X_feats_final)[3]
+N_assets <- dim(X_feats_final)[2]
+
+asset_net <- keras_model_sequential(name = 'asset_net') %>%
+  layer_dense(units = 32, kernel_regularizer = regularizer_l2(1e-4), input_shape = c(F_feats)) %>%
+  layer_activation_leaky_relu(alpha = 0.01) %>%
+  layer_dropout(rate = 0.4) %>%
+  layer_dense(units = 16, kernel_regularizer = regularizer_l2(1e-4)) %>%
+  layer_activation_leaky_relu(alpha = 0.01) %>%
+  layer_dropout(rate = 0.4) %>%
+  layer_dense(units = 1, activation = 'linear', kernel_regularizer = regularizer_l2(1e-4))
+
+input_layer <- layer_input(shape = c(N_assets, F_feats), name = 'features')
+scores      <- input_layer %>% time_distributed(asset_net)
+scores_flat <- scores %>% layer_flatten()
+g_avg       <- scores_flat %>% layer_lambda(function(x) k_mean(x, axis = 1L, keepdims = TRUE))
+g_centered  <- list(scores_flat, g_avg) %>%
+  layer_lambda(function(lst) lst[[1]] - lst[[2]])
+one_over_N  <- 1.0 / as.numeric(N_assets)
+weights_out <- g_centered %>%
+  layer_lambda(function(x) x * one_over_N + one_over_N, name = 'weights')
+model <- keras_model(inputs = input_layer, outputs = weights_out)
+
+rr <- 5
+cap_percent <- 0.03
+lambda_max  <- 50
+dcrra_loss <- function(y_true, y_pred) {
+  r_p       <- k_sum(y_pred * y_true, axis = 1L)
+  U         <- k_pow(1 + r_p, 1 - rr) / (1 - rr)
+  base_loss <- -k_mean(U)
+  excess_pos <- k_relu(y_pred - cap_percent)
+  excess_neg <- k_relu(-cap_percent - y_pred)
+  penalty    <- k_mean(k_sum(k_square(excess_pos) + k_square(excess_neg), axis = 1L))
+  base_loss + lambda_max * penalty
+}
+model %>% compile(loss = dcrra_loss, optimizer = optimizer_adam(learning_rate = 5e-5))
+
+# -------- 5. Model Training --------
+early_stop <- callback_early_stopping(monitor = 'val_loss', patience = 7, restore_best_weights = TRUE)
+history <- model %>% fit(
+  x                = X_feats_final,
+  y                = R_next_final,
+  epochs           = 200,
+  batch_size       = 32,
+  validation_split = 0.15,
+  callbacks        = list(early_stop),
+  verbose          = 2
+)
+
+# -------- 6. Extract Portfolio Returns & Weights --------
+pred_weights_final <- predict(model, X_feats_final)
+ppp_returns_final  <- rowSums(pred_weights_final * R_next_final)
+cum_ppp_final      <- cumprod(1 + ppp_returns_final) - 1
+
+# (Optional) convert to xts
+ppp_returns_xts_raw <- xts(ppp_returns_final, order.by = as.Date(train_dates_final))
+# To get monthly portfolio weights:
+weights_xts <- xts(pred_weights_final, order.by = as.Date(train_dates_final))
+colnames(weights_xts) <- currencies
+
+# -------- 7. (Optional) Benchmark: Naive Forward-Rate Strategy --------
+# E.g. equally weighted or carry (long highest forward premium)
+naive_weights <- matrix(1/N_assets, nrow = nrow(R_next_final), ncol = N_assets)
+naive_returns <- rowSums(naive_weights * R_next_final)
+naive_xts <- xts(naive_returns, order.by = as.Date(train_dates_final))
+
+# -------- 8. Plot Results --------
+library(ggplot2)
+library(tidyr)
+cum_df <- data.frame(
+  Date = as.Date(train_dates_final),
+  D_PPP = cumprod(1 + ppp_returns_final),
+  Naive = cumprod(1 + naive_returns)
+) %>% pivot_longer(-Date, names_to = "Strategy", values_to = "Cumulative_Return")
+
+ggplot(cum_df, aes(x = Date, y = Cumulative_Return, color = Strategy)) +
+  geom_line() + theme_minimal() +
+  labs(title = "Cumulative Return: D-PPP vs Naive", y = "Growth of $1", x = "Date")
+
+# --------- END OF SCRIPT ----------
+```
 

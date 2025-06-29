@@ -1,8 +1,9 @@
-"0","source(""preamble.R"")"
-"2","trying URL 'https://cran.rstudio.com/bin/macosx/big-sur-arm64/contrib/4.4/aod_1.3.3.tgz'
+"0","install.packages(expectregurl, repos=NULL, type=""source"")
+"
+"2","trying URL 'https://cran.r-project.org/src/contrib/Archive/expectreg/expectreg_0.50.tar.gz'
 "
 "2","Content type 'application/x-gzip'"
-"2"," length 399826 bytes (390 KB)
+"2"," length 1737431 bytes (1.7 MB)
 "
 "2","="
 "2","="
@@ -56,14 +57,39 @@
 "2","="
 "2","
 "
-"2","downloaded 390 KB
+"2","downloaded 1.7 MB
 
 "
-"1","
+"2","* installing *source* package ‘expectreg’ ...
 "
-"1",""
-"1","The downloaded binary packages are in
-	/var/folders/1j/db2b767j1x3gqmfwbrn5qhbr0000gn/T//Rtmpb6gPc1/downloaded_packages"
-"1",""
-"1","
+"2","** package ‘expectreg’ successfully unpacked and MD5 sums checked
+"
+"2","** using staged installation
+"
+"2","** libs
+"
+"2","using C++ compiler: ‘Apple clang version 16.0.0 (clang-1600.0.26.6)’
+"
+"2","using SDK: ‘MacOSX15.2.sdk’
+"
+"1","clang++ -arch arm64 -std=gnu++17 -I""/Library/Frameworks/R.framework/Resources/include"" -DNDEBUG  -I'/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/Rcpp/include' -I'/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include' -I/opt/R/arm64/include    -fPIC  -falign-functions=64 -Wall -g -O2   -c RcppExports.cpp -o RcppExports.o
+"
+"2","In file included from "
+"2","RcppExports.cpp:4:
+In file included from "
+"2","/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/RcppEigen.h:25:
+/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/RcppEigen/include/RcppEigenForward.h:25:10: fatal error: 'iterator' file not found
+"
+"2","   25 | #inclu"
+"2","de <iterator>
+      |          ^~~~~~~~~~
+"
+"2","1"
+"2"," error generated.
+"
+"2","make: *** [RcppExports.o] Error 1
+"
+"2","ERROR: compilation failed for package ‘expectreg’
+"
+"2","* removing ‘/Library/Frameworks/R.framework/Versions/4.4-arm64/Resources/library/expectreg’
 "
