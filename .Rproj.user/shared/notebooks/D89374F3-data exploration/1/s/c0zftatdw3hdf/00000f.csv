@@ -1,0 +1,10 @@
+"0","ggplot(alpha_portfolio, aes(x = Date, y = CumulativeReturn)) +
+  geom_line(color = ""blue"", size = 1) +
+  labs(title = ""Cumulative Returns of Alpha-Based Portfolio"",
+       x = ""Date"",
+       y = ""Cumulative Return"") +
+  theme_minimal() +
+  theme(legend.position = ""bottom"")
+"
+"2","Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
+Please use `linewidth` instead."

@@ -1,0 +1,18 @@
+"0","result_m <- estimate_a2(currencies = currencies, wide_data = wide_month, p = 2)
+"
+"2","Running GMM for GBP
+"
+"2","GMM failed for GBP: could not find function ""gmm""
+"
+"2","Running GMM for EUR
+"
+"2","GMM failed for EUR: could not find function ""gmm""
+"
+"2","Running GMM for CAD
+"
+"2","GMM failed for CAD: could not find function ""gmm""
+"
+"2","Running GMM for JPY
+"
+"2","GMM failed for JPY: could not find function ""gmm""
+"

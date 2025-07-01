@@ -95,6 +95,24 @@ wide_month <- wide_month %>%
 
 ```
 
+```{r Plotting Spot Rates}
+ggplot(data = wide_month %>%
+  dplyr::select(c("YearMonth","spot_CAD", "spot_EUR", "spot_GBP")) %>%
+    pivot_longer(cols = -YearMonth, names_to = "Currency", values_to = "Spot"),
+       aes(x = YearMonth, y = Spot, color = Currency)) +
+  geom_line() +
+    theme_minimal()
+
+ggplot(data = wide_month %>%
+  dplyr::select(c("YearMonth","spot_JPY")) %>%
+    pivot_longer(cols = -YearMonth, names_to = "Currency", values_to = "Spot"),
+       aes(x = YearMonth, y = Spot, color = Currency)) +
+  geom_line() +
+    theme_minimal()
+
+```
+
+
 ```{r LM regressions with monthly data}
 lm_data_monthly <- list()
 
@@ -327,7 +345,6 @@ ggplot(resid_plot_df, aes(x = Residual)) +
 
 ```
 
-
 ```{r simple regression to check on the forward premium bias}
 currencies <- c("GBP", "EUR", "CAD", "JPY")
 
@@ -382,10 +399,9 @@ ggplot(lmresults_df, aes(x = Currency, y = Slope)) +
   theme_minimal()
 ```
 
-### Estimating the asymmetric loss function
+# Estimating the asymmetric loss function
 
 ```{r estimating the loss functions}
-
 estimate_a <- function(currencies, wide_data, p) {
   # Define moment function inside for clarity/scope
   gmm_moments <- function(theta, data) {
@@ -447,7 +463,79 @@ estimate_a <- function(currencies, wide_data, p) {
   return(currency_results)
 }
 
+estimate_a2 <- function(currencies, wide_data, p = 2) {
+  gmm_moments <- function(theta, data) {
+    alpha <- theta[1]
+    e <- data$forecast_error
+    z <- as.matrix(data[, c("const", "lag_error")])
+    lambda <- alpha + (1 - 2 * alpha) * (e < 0)
+    g <- lambda * e^(p - 1) * z
+    return(g)
+  }
+
+  currency_results <- list()
+
+  for (cur in currencies) {
+    message("Running GMM for ", cur)
+
+    s_col  <- paste0("spot_", cur)
+    s_t1   <- paste0("spot_", cur, "_t1")
+    f_col  <- paste0("forward_", cur)
+
+    if (!all(c(s_col, s_t1, f_col) %in% names(wide_data))) {
+      message("Missing data columns for ", cur)
+      next
+    }
+
+    data_cur <- wide_data %>%
+      transmute(
+        forecast_error = .data[[s_t1]] - .data[[f_col]],     # (sₜ₊₁ − fₜ)
+        lag_error = lag(.data[[s_t1]] - .data[[f_col]]),     # lagged forecast error
+        const = 1
+      ) %>%
+      na.omit()
+
+    if (nrow(data_cur) > 10) {
+      res <- tryCatch({
+        gmm(g = gmm_moments,
+            x = data_cur,
+            t0 = c(0.5),
+            type = "cue",
+            method = "Brent",
+            lower = 0.01,
+            upper = 0.99)
+      }, error = function(e) {
+        message("GMM failed for ", cur, ": ", e$message)
+        return(NULL)
+      })
+
+      if (!is.null(res)) {
+        alpha_hat <- coef(res)
+        vcv_hat <- vcov(res)
+        se_alpha <- sqrt(vcv_hat[1, 1])
+        t_stat <- (alpha_hat - 0.5) / se_alpha
+        p_val <- 2 * pt(-abs(t_stat), df = nrow(data_cur) - 1)
+
+        currency_results[[cur]] <- list(
+          summary = summary(res),
+          alpha = alpha_hat,
+          se = se_alpha,
+          t = t_stat,
+          p = p_val,
+          n = nrow(data_cur)
+        )
+      }
+    } else {
+      message("Not enough data for ", cur)
+    }
+  }
+
+  return(currency_results)
+}
+
+
 results2 <- estimate_a(currencies = currencies, wide_data = wide_data, p = 2)
+result_m <- estimate_a2(currencies = currencies, wide_data = wide_month, p = 2)
 
 
 # View results for one example currency (e.g., EUR)
@@ -521,8 +609,6 @@ for (cur in currencies) {
 }
 
 ```
-
-
 
 
 
@@ -655,12 +741,12 @@ print(j_df)
 
 
 
-```{r}
+```{r trying to install expectreg}
 # install.packages(c("mboost", "BayesX", "fields"))
 # install.packages("expectreg_0.53.tar.gz", repos = NULL, type = "source")
 ```
 
-```{r Expectile based on package code}
+```{r Expectile based on expectreg}
 expectile_regression_laws <- function(X, y, tau = 0.5, max_iter = 50, tol = 1e-6) {
   X <- as.matrix(X)
   n <- nrow(X)
@@ -691,8 +777,7 @@ expectile_regression_laws <- function(X, y, tau = 0.5, max_iter = 50, tol = 1e-6
 
 ```
 
-```{r}
-# Suppose you want expectile regression for GBP
+```{r expectile test for GBP}
 df_test <- wide_data %>%
   dplyr::select(GBP_excess, GBP_prem) %>%
   filter(!is.na(GBP_excess), !is.na(GBP_prem))
@@ -800,7 +885,7 @@ ggplot(er_df, aes(x = Tau, y = Estimate, color = Currency)) +
 
 ```
 
-```{r}
+```{r plot expectiles - prem vs excess}
 plot_expectiles <- function(df, expectile_fits, taus, currency = "GBP") {
   plot(df$x, df$y,
        main = paste("Expectile Regressions for", currency),
@@ -1002,7 +1087,7 @@ preds <- predict(qrf_gbp, newdata = data.frame(prem = df_gbp$prem), what = c(0.1
 ```
 
 
-```{r}
+```{r KT}
 kt_value <- function(r, alpha = 0.88, lambda = 2.25) {
   ifelse(r >= 0, r^alpha, -lambda * (-r)^alpha)
 }
@@ -1108,7 +1193,124 @@ plot_value_function()
 ```
 
 
-# Deep Parametric Porfolio Policy
+# Porfolio Policy
+Portfolio based on alpha, without the macro features yet. These will be added later. for now we are simply trying to create a strategy based on the alphas and we can see that they are being systematically under-/over-predicted based on the forward rates. This will alow us to optimise a portfolio allocation during 
+
+```{r Rolling GMM Alpha Estimation}
+
+plan(multisession, workers = parallel::detectCores() - 1)
+
+roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2) {
+  n <- nrow(data)
+  date_seq <- data$YearMonth[(window + 1):n]
+  
+  # Inner function for one currency
+  estimate_alpha_for_currency <- function(cur) {
+    e_col <- paste0(cur, "_excess")
+    f_col <- paste0(cur, "_prem")
+    
+    alpha_vec <- rep(NA_real_, length(date_seq))
+    
+    for (i in seq_along(date_seq)) {
+      idx_start <- i
+      idx_end <- i + window - 1
+      sub_data <- data[idx_start:idx_end, ]
+      
+      dat_cur <- sub_data %>%
+        transmute(
+          forecast_error = .data[[e_col]] - .data[[f_col]],
+          lag_error = lag(.data[[e_col]] - .data[[f_col]]),
+          const = 1
+        ) %>% na.omit()
+      
+      
+      if (nrow(dat_cur) > 10) {
+        gmm_moments <- function(theta, data) {
+          alpha <- theta[1]
+          e <- data$forecast_error
+          z <- as.matrix(data[, c("const", "lag_error")])
+          lambda <- alpha + (1 - 2 * alpha) * (e < 0)
+          g <- lambda * e^(p - 1) * z
+          return(g)
+        }
+        
+        res <- tryCatch({
+          gmm(g = gmm_moments, x = dat_cur, t0 = c(0.5),
+              type = "cue", method = "Brent", lower = 0.01, upper = 0.99)
+        }, error = function(e) NULL)
+        
+        alpha_vec[i] <- if (!is.null(res)) coef(res)[1] else NA
+      }
+    }
+    
+    return(alpha_vec)
+  }
+  
+  # Run in parallel
+  alpha_list <- future_map(currencies, estimate_alpha_for_currency, .progress = TRUE)
+  names(alpha_list) <- currencies
+  
+  alpha_matrix <- do.call(cbind, alpha_list)
+  rownames(alpha_matrix) <- as.character(date_seq)
+  return(alpha_matrix)
+}
+
+alpha_matrix <- roll_alpha_gmm_parallel(wide_month_macro, currencies, window = 60, p = p)
+```
+
+Now that we have the alpha calculations, we can use these simply as weights for the portfolio of currencies. We will size the portfolio based on the alphas and how far they are from 0.5.
+
+```{r Simple Portfolio Allocation}
+alpha_long <- as.data.frame(alpha_matrix) %>%
+  rownames_to_column("Date") %>%
+  pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
+  mutate(Date = as.Date(Date, format = "%Y-%m-%d"),
+    Alpha = as.numeric(Alpha),
+    Deviation = abs(Alpha - 0.5),                    # how asymmetric
+    Direction = ifelse(Alpha < 0.5, "Long", "Short") # investment direction
+  )
+
+# creating the weights
+
+alpha_long <- alpha_long %>%
+  group_by(Date) %>%
+  mutate(
+    RawWeight = ifelse(Direction == "Long", Deviation, -Deviation),
+    SumAbs = sum(abs(RawWeight), na.rm = TRUE),
+    Weight = ifelse(SumAbs > 0, RawWeight / SumAbs, 0)
+  ) %>%
+  ungroup()
+
+returns_long <- wide_month %>%
+  mutate(Date = YearMonth) %>%
+  dplyr::select(Date, ends_with("_excess")) %>%
+  pivot_longer(-Date, names_to = "Currency", values_to = "ExcessReturn") %>%
+  mutate(Currency = sub("_excess", "", Currency))
+
+alpha_portfolio <- alpha_long %>%
+  left_join(returns_long, by = c("Date", "Currency")) %>%
+  group_by(Date) %>%
+  summarise(PortfolioReturn = sum(Weight * ExcessReturn, na.rm = TRUE), .groups = "drop") %>%
+    mutate(CumulativeReturn = cumprod(1 + PortfolioReturn) - 1)
+
+
+```
+
+```{r Plotting Simple Alpha Portfolio Returns}
+ggplot(alpha_portfolio, aes(x = Date, y = CumulativeReturn)) +
+  geom_line(color = "blue", size = 1) +
+  labs(title = "Cumulative Returns of Alpha-Based Portfolio",
+       x = "Date",
+       y = "Cumulative Return") +
+  theme_minimal() +
+  theme(legend.position = "bottom")
+```
+
+
+
+
+
+# D-PPP
 Given we have these alphas that we are estimating we can see that based on the forward rates, some currencies are systematically under-/over- predicted. We aim to utilise this fact and optimise portfolio allocation based on these utiltiy asymmetries calculated on a rolling basis.
 
 ```{r Sim data}
@@ -1397,69 +1599,8 @@ if (length(macro_prefixes) > 0) {
 # Remove any duplicated names just in case
 macro_features <- unique(macro_features)
 
-# -------- 2. Rolling GMM Alpha Estimation (Elliott et al. 2006) --------
-library(furrr)
-library(dplyr)
-library(gmm)
-plan(multisession, workers = parallel::detectCores() - 1)
-
-roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2) {
-  n <- nrow(data)
-  date_seq <- data$YearMonth[(window + 1):n]
-  
-  # Inner function for one currency
-  estimate_alpha_for_currency <- function(cur) {
-    e_col <- paste0(cur, "_excess")
-    f_col <- paste0(cur, "_prem")
-    
-    alpha_vec <- rep(NA_real_, length(date_seq))
-    
-    for (i in seq_along(date_seq)) {
-      idx_start <- i
-      idx_end <- i + window - 1
-      sub_data <- data[idx_start:idx_end, ]
-      
-      dat_cur <- sub_data %>%
-        transmute(
-          forecast_error = .data[[e_col]] - .data[[f_col]],
-          lag_error = lag(.data[[e_col]] - .data[[f_col]]),
-          const = 1
-        ) %>% na.omit()
-      
-      if (nrow(dat_cur) > 10) {
-        gmm_moments <- function(theta, data) {
-          alpha <- theta[1]
-          e <- data$forecast_error
-          z <- as.matrix(data[, c("const", "lag_error")])
-          lambda <- alpha + (1 - 2 * alpha) * (e < 0)
-          g <- lambda * e^(p - 1) * z
-          return(g)
-        }
-        
-        res <- tryCatch({
-          gmm(g = gmm_moments, x = dat_cur, t0 = c(0.5),
-              type = "cue", method = "Brent", lower = 0.01, upper = 0.99)
-        }, error = function(e) NULL)
-        
-        alpha_vec[i] <- if (!is.null(res)) coef(res)[1] else NA
-      }
-    }
-    
-    return(alpha_vec)
-  }
-  
-  # Run in parallel
-  alpha_list <- future_map(currencies, estimate_alpha_for_currency, .progress = TRUE)
-  names(alpha_list) <- currencies
-  
-  alpha_matrix <- do.call(cbind, alpha_list)
-  rownames(alpha_matrix) <- as.character(date_seq)
-  return(alpha_matrix)
-}
 
 
-
-alpha_matrix <- roll_alpha_gmm_parallel(wide_month_macro, currencies, window = window_m, p = p)
  date_seq <- as.Date(rownames(alpha_matrix))
 n_steps <- length(date_seq)
 N_assets <- length(currencies)
@@ -1524,10 +1665,14 @@ asset_net <- keras_model_sequential(name = 'asset_net') %>%
 input_layer <- layer_input(shape = c(N_assets, F_feats), name = 'features')
 scores      <- input_layer %>% time_distributed(asset_net)
 scores_flat <- scores %>% layer_flatten()
+
 g_avg       <- scores_flat %>% layer_lambda(function(x) k_mean(x, axis = 1L, keepdims = TRUE))
+
 g_centered  <- list(scores_flat, g_avg) %>%
   layer_lambda(function(lst) lst[[1]] - lst[[2]])
+
 one_over_N  <- 1.0 / as.numeric(N_assets)
+
 weights_out <- g_centered %>%
   layer_lambda(function(x) x * one_over_N + one_over_N, name = 'weights')
 model <- keras_model(inputs = input_layer, outputs = weights_out)
@@ -1589,4 +1734,23 @@ ggplot(cum_df, aes(x = Date, y = Cumulative_Return, color = Strategy)) +
 
 # --------- END OF SCRIPT ----------
 ```
+
+```{r Plot Alphas}
+alpha_df <- as.data.frame(alpha_matrix) %>%
+  rownames_to_column("Date") %>%
+  mutate(Date = as.Date(Date)) %>%
+  pivot_longer(-Date, names_to = "Currency", values_to = "Alpha")
+
+# Plot
+ggplot(alpha_df, aes(x = Date, y = Alpha, color = Currency)) +
+  geom_line() +
+  geom_hline(yintercept = 0.5, linetype = "dashed", color = "grey") +
+  theme_minimal() +
+  labs(title = "Rolling GMM Alpha Estimates Over Time",
+       y = expression(hat(alpha)),
+       x = "Date")
+
+```
+
+
 
