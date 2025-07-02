@@ -3,7 +3,7 @@
     "path": "~/Desktop/Cambridge/diss/dissertation/preamble.R",
     "project_path": "preamble.R",
     "type": "r_source",
-    "hash": "3670511925",
+    "hash": "0",
     "contents": "",
     "dirty": false,
     "created": 1747925352901.0,
@@ -13,15 +13,15 @@
         "tempName": "Untitled2",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "21,0",
-        "scrollLine": "4"
+        "cursorPosition": "33,17",
+        "scrollLine": "24"
     },
     "folds": "",
-    "lastKnownWriteTime": 1751290438,
+    "lastKnownWriteTime": 1751460541,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1751290438716,
+    "last_content_update": 1751460541073,
     "read_only": false,
     "read_only_alternatives": []
 }

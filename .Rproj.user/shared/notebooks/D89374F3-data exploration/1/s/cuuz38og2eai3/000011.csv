@@ -1,18 +1,14 @@
-"0","result_m <- estimate_a2(currencies = currencies, wide_data = wide_month, p = 2)
+"0","print(p_vals2)
 "
-"2","Running GMM for GBP
+"1","GBP.Theta[1] "
+"1","EUR.Theta[1] "
+"1","CAD.Theta[1] "
+"1","JPY.Theta[1] "
+"1","
 "
-"2","GMM failed for GBP: could not find function ""gmm""
-"
-"2","Running GMM for EUR
-"
-"2","GMM failed for EUR: could not find function ""gmm""
-"
-"2","Running GMM for CAD
-"
-"2","GMM failed for CAD: could not find function ""gmm""
-"
-"2","Running GMM for JPY
-"
-"2","GMM failed for JPY: could not find function ""gmm""
+"1","1.484789e-09 "
+"1","4.412953e-10 "
+"1","1.202720e-03 "
+"1","4.579427e-23 "
+"1","
 "
