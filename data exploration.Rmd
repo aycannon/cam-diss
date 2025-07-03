@@ -1112,6 +1112,20 @@ alpha_sma <- smooth_alpha %>%
 
 ## Simple plot of the smoothed alphas
 
+ggplot(smooth_alpha, aes(x = Date)) +
+  geom_line(aes(y = GBP, color = "GBP")) +
+  geom_line(aes(y = EUR, color = "EUR")) +
+  geom_line(aes(y = JPY, color = "JPY")) +
+  geom_line(aes(y = CAD, color = "CAD")) +
+  labs(title = "Rolling Alpha Estimates",
+       x = "Date",
+       y = "Alpha") +
+  theme_minimal() +
+  scale_color_manual(values = c("GBP" = "blue", 
+                                 "EUR" = "red", 
+                                 "JPY" = "green", 
+                                 "CAD" = "purple"))
+
 ggplot(alpha_ewma, aes(x = Date)) +
   geom_line(aes(y = GBP, color = "GBP")) +
   geom_line(aes(y = EUR, color = "EUR")) +
@@ -1186,7 +1200,8 @@ a_sma_portfolio <- alpha_sma_long %>%
 a_portfolio <- alpha_portfolio %>%
   rename(Original_CumulativeReturn = CumulativeReturn) %>%
   left_join(a_ewma_portfolio %>% rename(EWMA_CumulativeReturn = CumulativeReturn), by = "Date") %>%
-  left_join(a_sma_portfolio %>% rename(SMA_CumulativeReturn = CumulativeReturn), by = "Date")
+  left_join(a_sma_portfolio %>% rename(SMA_CumulativeReturn = CumulativeReturn), by = "Date") %>%
+    mutate(Date = as.Date(Date))
     
 
 ## plotting returns
@@ -1198,7 +1213,23 @@ ggplot(a_portfolio, aes(x = Date)) +
        x = "Date",
        y = "Cumulative Return") +
   theme_minimal() +
-  theme(legend.position = "bottom", legend.title = element_blank())
+  theme(legend.position = "bottom", legend.title = element_blank()) +
+    annotate(geom = "text",
+             x = as.Date("2020-03-11"),
+             # position the label text
+             y = -.04, label = "Pandemic declared",
+             fontface = "plain", angle = 90,
+             alpha = 0.5, vjust = 1.5) +
+    annotate(geom = "text",
+             x = as.Date("2008-11-15"),
+             # position the label text
+             y = -.04, label = "Great Recession",
+             fontface = "plain", angle = 90,
+             alpha = 0.5, vjust = 1.5) + 
+    geom_vline(xintercept = as.Date("2020-03-11"),
+               color = "red", lty = "dotted") +
+    geom_vline(xintercept = as.Date("2008-11-15"),
+               color = "red", lty = "dotted")
 
 
 
