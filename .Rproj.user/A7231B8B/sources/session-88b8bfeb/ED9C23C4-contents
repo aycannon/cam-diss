@@ -591,6 +591,8 @@ plan(multisession, workers = parallel::detectCores() - 1)
 roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2) {
   n <- nrow(data)
   date_seq <- data$YearMonth[(window + 1):n]
+  inv_logit <- function(x) 1 / (1 + exp(-x))
+
   
   # Inner function for one currency
   estimate_alpha_for_currency <- function(cur) {
@@ -616,18 +618,18 @@ roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2) {
         gmm_moments <- function(theta, data) {
           alpha <- theta[1]
           e <- data$forecast_error
-          z <- as.matrix(data[, c("const", "lag_error")])
-          lambda <- alpha + (1 - 2 * alpha) * (e < 0)
-          g <- lambda * e^(p - 1) * z
+          z <- matrix(1, nrow = length(e), ncol = 1) #z <- as.matrix(data[, c("const", "lag_error")])
+          lambda <- (e < 0) - alpha
+            g <- z * lambda * abs(e)^(p - 1)
           return(g)
         }
         
         res <- tryCatch({
-          gmm(g = gmm_moments, x = dat_cur, t0 = c(0.5),
-              type = "cue", method = "Brent", lower = 0.01, upper = 0.99)
-        }, error = function(e) NULL)
+  gmm(g = gmm_moments, x = dat_cur, t0 = c(0),  # t0 is on logit scale
+      type = "cue", method = "BFGS")
+}, error = function(e) NULL)
         
-        alpha_vec[i] <- if (!is.null(res)) coef(res)[1] else NA
+            alpha_vec[i] <- if (!is.null(res)) inv_logit(coef(res)[1]) else NA
       }
     }
     
@@ -644,7 +646,9 @@ roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2) {
 }
 
 alpha_matrix <- roll_alpha_gmm_parallel(wide_month, currencies, window = 60, p = p)
+
 ```
+
 
 Now that we have the alpha calculations, we can use these simply as weights for the portfolio of currencies. We will size the portfolio based on the alphas and how far they are from 0.5.
 
@@ -655,7 +659,7 @@ alpha_long <- as.data.frame(alpha_matrix) %>%
   mutate(Date = as.Date(Date, format = "%Y-%m-%d"),
     Alpha = as.numeric(Alpha),
     Deviation = abs(Alpha - 0.5),                    # how asymmetric
-    Direction = ifelse(Alpha > 0.5, "Long", "Short") # investment direction
+    Direction = ifelse(Alpha < 0.5, "Long", "Short") # investment direction
   )
 
 # creating the weights
@@ -1143,7 +1147,7 @@ alpha_sma_long <- alpha_sma %>%
     pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
   mutate(Alpha = as.numeric(Alpha),
     Deviation = abs(Alpha - 0.5),                    # how asymmetric
-    Direction = ifelse(Alpha > 0.5, "Long", "Short") # investment direction
+    Direction = ifelse(Alpha < 0.5, "Long", "Short") # investment direction
   ) %>%
     group_by(Date) %>%
   mutate(
@@ -1157,7 +1161,7 @@ alpha_ewma_long <- alpha_ewma %>%
     pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
   mutate(Alpha = as.numeric(Alpha),
     Deviation = abs(Alpha - 0.5),                    # how asymmetric
-    Direction = ifelse(Alpha > 0.5, "Long", "Short") # investment direction
+    Direction = ifelse(Alpha < 0.5, "Long", "Short") # investment direction
   ) %>%
     group_by(Date) %>%
   mutate(
@@ -1194,7 +1198,7 @@ ggplot(a_portfolio, aes(x = Date)) +
        x = "Date",
        y = "Cumulative Return") +
   theme_minimal() +
-  scale_color_manual(values = c("EWMA" = "blue", "SMA" = "red", "No Smoothing" = "green"))
+  theme(legend.position = "bottom", legend.title = element_blank())
 
 
 

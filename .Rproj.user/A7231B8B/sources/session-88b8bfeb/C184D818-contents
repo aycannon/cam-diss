@@ -32,6 +32,8 @@ library(quantreg)
 library(car)
 library(quantregForest)
 library(RcppRoll)
+install.packages('latex2exp')
+library(latex2exp)
 
 
 library(VIM)
