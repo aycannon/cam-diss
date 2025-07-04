@@ -1237,6 +1237,91 @@ ggplot(a_portfolio, aes(x = Date)) +
 ```
 
 
+### benchmark startegies
+```{r benchmark 1/n}
+library(dplyr)
+library(tidyr)
+library(purrr)
+
+# — assume you already have wide_month like this — one row per YearMonth,
+#   columns spot_<C>, forward_<C>, spot_<C>_t1, plus you’ve computed
+#   excess_<C> = spot_<C>_t1 - spot_<C>
+#   prem_<C>   = forward_<C>  - spot_<C>
+
+## 1) Gather out into long format so we can loop over currencies generically
+returns_long <- wide_month %>% 
+  dplyr::select(YearMonth, 
+         ends_with("_excess"), 
+         ends_with("_prem")) %>% 
+  pivot_longer(
+    cols = -YearMonth,
+    names_to = c(".value","Currency"),
+    names_sep = "_"
+  ) %>%
+    pivot_longer(
+     cols = c(-YearMonth, -Currency),
+     names_to = "Cur",
+     values_to = "value"
+    ) %>%
+    pivot_wider(
+     names_from = Currency,
+     values_from = value
+    )
+
+
+## 2) 1/N equal‐weight portfolio
+#    at each month t we hold 1/N in each currency for that month’s excess return
+n_curr <- returns_long %>% 
+  distinct(Cur) %>% nrow()
+
+bench_1n <- returns_long %>% 
+  group_by(YearMonth) %>% 
+  summarise(
+    OneOverN = mean(excess, na.rm=TRUE)
+  ) %>% 
+  ungroup()
+
+## 3) forward‐signal portfolio
+bench_forw <- returns_long %>% 
+  group_by(YearMonth) %>% 
+  mutate(
+    sign_prem = sign(prem)
+  ) %>% 
+  summarise(
+    ForwardSignal = mean(sign_prem * excess, na.rm=TRUE)
+  ) %>% 
+  ungroup()
+
+## 4) combine and compute cumulative returns
+bench <- bind_cols(
+  bench_1n,
+  bench_forw = bench_forw$ForwardSignal) %>%
+  inner_join(a_portfolio %>% rename(YearMonth = Date), by = "YearMonth") %>%
+  mutate(
+    OneN_CumulativeReturn = cumprod(1 + OneOverN) - 1,
+    Forward_CumulativeReturn = cumprod(1 + bench_forw) - 1,
+  )
+
+# plotting the benchmark policies
+
+bench %>% 
+  pivot_longer(
+    cols      = ends_with("_CumulativeReturn"),
+    names_to  = "Strategy",
+    values_to = "CumulativeReturn"
+  ) %>% 
+
+  ggplot(aes(YearMonth, CumulativeReturn, color = Strategy)) +
+    geom_line() +
+    theme_minimal() +
+     scale_color_manual(labels = c("Alpha-Based (EWMA)","Forward Signal", "1/N", "Alpha-Based", "Alpha-Based (SMA)"),
+                       values = c("blue", "red", "green", "purple", "orange"))
+
+
+
+
+```
+
 
 
 
