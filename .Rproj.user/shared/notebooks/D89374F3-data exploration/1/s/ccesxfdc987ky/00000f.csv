@@ -1,2 +1,0 @@
-"0","df <- read_xlsx(""data/data1.xlsx"")"
-"0","dt <- as.data.table(df)"
