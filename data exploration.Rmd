@@ -1198,8 +1198,9 @@ anim <- ggplot(animate_alphas, aes(x = eps, y = Loss, color = Currency)) +
         y = "L(Error)"
     ) +
     theme_minimal() +
+    theme(legend.position = "bottom") +
     transition_time(Date) +
-    ease_aes("linear")
+    ease_aes("linear") 
 
 animate(anim, nframes = 200, fps = 10, renderer = gifski_renderer("loss_animation.gif"))
 
