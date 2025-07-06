@@ -414,8 +414,8 @@ ggplot(lmresults_df, aes(x = Currency, y = Slope)) +
                     ymax = Slope + 1.96 * SE.Slope),
                 width = 0.1) +
   geom_hline(yintercept = 1, linetype = "dashed", color = "grey") +
-  labs(title = "Simple Regression Estimates",
-       x = "Currency", y = expression(hat(beta) ~ "(on forward premium)")) +
+  labs(x = "Currency", 
+       y = "Slope Coefficient") +
   theme_minimal()
 ```
 
@@ -1000,7 +1000,7 @@ ggplot(combined_cume, aes(x = Date, y = CumulativeReturn, color = Source, linety
   theme_minimal() +
   labs(x = "Date", 
        y = "Cumulative Return") +
-  scale_color_viridis_d(option = "D") +
+  #scale_color_viridis_d(option = "E") +
   theme(legend.position = "bottom", legend.title = element_blank(), legend.spacing.x = unit(2, "cm"))
 
 ```
@@ -1018,7 +1018,7 @@ a_ewma_portfolios %>%
     geom_line() +
     scale_color_viridis_d("Strategy",
       labels = c("alpha-based", "alpha-Delta"),
-      option = "D"
+      option = "H"
     ) +
     theme_minimal() +
     theme(legend.position = "bottom", legend.title = element_blank()) +
@@ -1191,8 +1191,6 @@ animate_alphas <- alpha_ewma_long %>%
 
 anim <- ggplot(animate_alphas, aes(x = eps, y = Loss, color = Currency)) +
     geom_line() +
-    facet_wrap(~Currency) +
-    scale_color_viridis_d(option = "D") +
     labs(
         title = "Dynamic Asymmetric Loss Functions",
         subtitle = "Date: {frame_time}",
@@ -1287,9 +1285,6 @@ bench %>%
         "Alpha-Based (orig)",
         "Alpha-Based (SMA)"
       )) +
-     #scale_color_manual(
-      #   labels = c("Alpha-Based (EWMA)","Forward Signal", "1/N", "Alpha-Based", "Alpha-Based (SMA)"), 
-       #  values = c("blue", "red", "green", "purple", "orange")) +
     labs(title = "Benchmark Strategies Cumulative Returns",
          x = "Date",
          y = "Cumulative Return") +
