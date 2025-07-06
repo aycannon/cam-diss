@@ -271,64 +271,7 @@ for (cur in currencies) {
 
 ```
 
-```{r estimate ARIMA for residuals}
-library(forecast)
-
-for (cur in currencies) {
-  excess_var <- paste0(cur, "_excess")
-  prem_var   <- paste0(cur, "_prem")
-
-  df <- wide_data %>%
-    dplyr::select(all_of(c(excess_var, prem_var))) %>%
-    dplyr::filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]]))
-
-  model <- lm(as.formula(paste0(excess_var, " ~ ", prem_var)), data = df)
-  res <- resid(model)
-
-  cat("-----", cur, "-----\n")
-  auto_model <- auto.arima(res, max.p = 0, max.q = 30, seasonal = FALSE, ic = "bic")
-  print(auto_model)
-}
-
-```
-
-```{r Newey-West Standard Errors - everything insig}
-
-lmnw_data <- list()
-for (cur in currencies) {
-  excess_var <- paste0(cur, "_excess")
-  prem_var   <- paste0(cur, "_prem")
-  
-  df <- wide_data %>%
-    dplyr::select(all_of(c(excess_var, prem_var))) %>%
-    filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]]))
-  
-  model <- lm(as.formula(paste0(excess_var, " ~ ", prem_var)), data = df)
-  nw_vcov <- NeweyWest(model, lag = 14, prewhite = FALSE)
-  nw_se <- coeftest(model, vcov. = nw_vcov)
-
-  summary_stats <- tibble(
-    Currency   = cur,
-    Intercept  = coef(model)[1],
-    SE.Intercept = nw_se[1, "Std. Error"],
-    Slope      = coef(model)[2],
-    SE.Slope   = nw_se[2, "Std. Error"],
-    R2         = summary(model)$r.squared,
-    N          = nobs(model)
-  )
-  
-  fitted_df <- tibble(
-    Currency = cur,
-    Fitted   = fitted(model),
-    Residual = resid(model)
-  )
-  
-  lmnw_data[[cur]] <- list(summary = summary_stats, residuals = fitted_df)
-}
-lmnwresults_df <- bind_rows(list(lmnw_data$GBP$summary, lmnw_data$EUR$summary, lmnw_data$CAD$summary, lmnw_data$JPY$summary))
-print(lmnwresults_df)
-
-```
+# Forecast data for ARIMA testing (in altrernative R file titled "ARIMA testing.R")
 
 
 ```{r Plotting lm Residuals}
@@ -901,7 +844,6 @@ alpha_ewma_long <- wide_smooth_ewma %>%
   ungroup()
 
 alpha_sma_long <- wide_smooth_sma %>%
-  
   pivot_longer(
     cols      = ends_with("_SMA"),
     names_to  = "Currency",
@@ -1062,124 +1004,22 @@ a_sma_portfolios %>%
     annotate("text", x = as.Date("2020-03-11"), y = -.1, label = "Pandemic Announced", 
              angle=90, vjust=-.5, size=4, alpha=0.6)
 
-ggplot(portfolio_combined, aes(x = Date, y = CumulativeReturn, color = Strategy)) +
-  geom_line(alpha = 0.8) +
-  theme_minimal() +
-  labs(x = "Date",
-       y = "Cumulative Return"
-       ) +
-  theme(legend.position = "bottom", legend.title = element_blank()) +
-  scale_color_viridis_d(option = "D")
-
-
-```
-
-
-
-```{r Implementing the alpha strat on the smoothed data}
-# Implementing the alpha strategy on the smoothed data
-alpha_sma_long <- alpha_sma %>%
-    pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
-  mutate(Alpha = as.numeric(Alpha),
-    Deviation = abs(Alpha - 0.5),                    # how asymmetric
-    Direction = ifelse(Alpha > 0.5, "Long", "Short") # investment direction
-  ) %>%
-    group_by(Date) %>%
-  mutate(
-    RawWeight = ifelse(Direction == "Long", Deviation, -Deviation),
-    SumAbs = sum(abs(RawWeight), na.rm = TRUE),
-    Weight.a = ifelse(SumAbs > 0, RawWeight / SumAbs, 0)
-  ) %>%
-    mutate(
-    n_pos = sum(Delta >  0, na.rm=TRUE),
-    n_neg = sum(Delta <  0, na.rm=TRUE),
-    Weight.d = case_when(
-      Delta >  0 ~  1 / n_pos,
-      Delta <  0 ~ -1 / n_neg,
-      TRUE       ~  0
-    )
-  ) %>%
-  ungroup()
-
-alpha_ewma_long <- alpha_ewma %>%
-    pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
-  mutate(Alpha = as.numeric(Alpha),
-    Deviation = abs(Alpha - 0.5),                    # how asymmetric
-    Direction = ifelse(Alpha > 0.5, "Long", "Short") # investment direction
-  ) %>%
-    group_by(Date) %>%
-  mutate(
-    RawWeight = ifelse(Direction == "Long", Deviation, -Deviation),
-    SumAbs = sum(abs(RawWeight), na.rm = TRUE),
-    Weight.a = ifelse(SumAbs > 0, RawWeight / SumAbs, 0)
-  ) %>%
-    mutate(
-    n_pos = sum(Delta >  0, na.rm=TRUE),
-    n_neg = sum(Delta <  0, na.rm=TRUE),
-    Weight.d = case_when(
-      Delta >  0 ~  1 / n_pos,
-      Delta <  0 ~ -1 / n_neg,
-      TRUE       ~  0
-    )
-  ) %>%
-  ungroup()
-
-
-a_ewma_portfolio <- alpha_ewma_long %>%
-  left_join(returns_long, by = c("Date", "Currency")) %>%
-  group_by(Date) %>%
-  summarise(PortfolioReturn = sum(Weight * ExcessReturn, na.rm = TRUE), .groups = "drop") %>%
-    mutate(CumulativeReturn = cumprod(1 + PortfolioReturn) - 1)
-a_sma_portfolio <- alpha_sma_long %>%
-  left_join(returns_long, by = c("Date", "Currency")) %>%
-  group_by(Date) %>%
-  summarise(PortfolioReturn = sum(Weight * ExcessReturn, na.rm = TRUE), .groups = "drop") %>%
-    mutate(CumulativeReturn = cumprod(1 + PortfolioReturn) - 1)
-
-a_portfolio <- alpha_portfolio %>%
-  rename(Original_CumulativeReturn = CumulativeReturn) %>%
-  left_join(a_ewma_portfolio %>% rename(EWMA_CumulativeReturn = CumulativeReturn), by = "Date") %>%
-  left_join(a_sma_portfolio %>% rename(SMA_CumulativeReturn = CumulativeReturn), by = "Date") %>%
-    mutate(Date = as.Date(Date))
-    
-
-## plotting returns
-ggplot(a_portfolio, aes(x = Date)) +
-  geom_line(aes(y = EWMA_CumulativeReturn, color = "EWMA")) +
-  geom_line(aes(y = SMA_CumulativeReturn, color = "SMA")) +
-  geom_line(aes(y = Original_CumulativeReturn, color = "No Smoothing")) +
-  labs(x = "Date",
-       y = "Cumulative Return") +
-  theme_minimal() +
-  theme(legend.position = "bottom", legend.title = element_blank()) +
-    annotate(geom = "text",
-             x = as.Date("2020-03-11"),
-             # position the label text
-             y = -.04, label = "Pandemic declared",
-             fontface = "plain", angle = 90,
-             alpha = 0.6, vjust = 1.5) +
-    annotate(geom = "text",
-             x = as.Date("2008-11-15"),
-             # position the label text
-             y = -.04, label = "Great Recession",
-             fontface = "plain", angle = 90,
-             alpha = 0.6, vjust = 1.5) + 
-    geom_vline(xintercept = as.Date("2020-03-11"),
-               color = "red", lty = "dotted") +
-    geom_vline(xintercept = as.Date("2008-11-15"),
-               color = "red", lty = "dotted") +
-    scale_colour_viridis_d("Currency", option = "D") 
-
-
+# ggplot(portfolio_combined, aes(x = Date, y = CumulativeReturn, color = Strategy)) +
+#   geom_line(alpha = 0.8) +
+#   theme_minimal() +
+#   labs(x = "Date",
+#        y = "Cumulative Return"
+#        ) +
+#   theme(legend.position = "bottom", legend.title = element_blank()) +
+#   scale_color_viridis_d(option = "D")
 
 
 ```
 
 
 ```{r Rolling alphas graphs animated}
-install.packages("gifski")
-library(gganimate)
-
+# install.packages("gifski")
+# library(gganimate)
 
 eps_seq <- seq(-1,1,length.out = 500)
 
@@ -1232,81 +1072,108 @@ returns_long <- wide_month %>%
 
 
 ## 2) 1/N equal‐weight portfolio
-#    at each month t we hold 1/N in each currency for that month’s excess return
-n_curr <- returns_long %>% 
-  distinct(Cur) %>% nrow()
 
-bench_1n <- returns_long %>% 
+returns_filtered <- returns_long %>%
+    mutate(Date = as.Date(YearMonth)) %>%
+  filter(Date >= as.Date("2005-01-01"))
+
+# 1) Number of currencies (if still needed)
+n_curr <- returns_filtered %>% 
+  distinct(Cur) %>% 
+  nrow()
+
+# 2) 1/N benchmark strategy
+bench_1n <- returns_filtered %>% 
   group_by(YearMonth) %>% 
   summarise(
-    OneOverN = mean(excess, na.rm=TRUE)
-  ) %>% 
-  ungroup()
+    OneOverN = mean(excess, na.rm = TRUE),
+    .groups = "drop"
+  )
 
-## 3) forward‐signal portfolio
-bench_forw <- returns_long %>% 
-  group_by(YearMonth) %>% 
+# 3) Forward signal benchmark strategy
+bench_forw <- returns_filtered %>% 
+  group_by(YearMonth) %>%
   mutate(
     sign_prem = sign(prem)
   ) %>% 
   summarise(
-    ForwardSignal = mean(sign_prem * excess, na.rm=TRUE)
-  ) %>% 
-  ungroup()
+    ForwardSignal = mean(sign_prem * excess, na.rm = TRUE),
+    .groups = "drop"
+  )
+
 
 ## 4) combine and compute cumulative returns
-bench <- bind_cols(
-  bench_1n,
-  bench_forw = bench_forw$ForwardSignal) %>%
-  inner_join(a_portfolio %>% rename(YearMonth = Date), by = "YearMonth") %>%
+bench_both <- bench_1n %>%
+  rename(OneN = OneOverN) %>%
+  mutate(Forward = bench_forw$ForwardSignal) %>%
+  mutate(Date = as.Date(YearMonth)) %>%
+  select(Date, OneN, Forward) %>%
   mutate(
-    OneN_CumulativeReturn = cumprod(1 + OneOverN) - 1,
-    Forward_CumulativeReturn = cumprod(1 + bench_forw) - 1,
+    Cume_OneN = cumprod(1 + OneN) - 1,
+    Cume_Forward = cumprod(1 + Forward) - 1
+  ) %>%
+  pivot_longer(
+    cols = starts_with("Cume_"),
+    names_to = "Strategy",
+    names_prefix = "Cume_",
+    values_to = "CumulativeReturn"
+  ) %>%
+  mutate(
+    Source = "Benchmark",
+    Strategy_1 = Strategy
+  )
+
+alpha_all <- combined_cume %>%
+  select(Date, CumulativeReturn, Source, Strategy_1 = Strategy)
+
+final_cume_all <- bind_rows(alpha_all, bench_both) %>%
+  mutate(
+    Strategy_1 = case_when(
+      Strategy_1 == "OneN"    ~ "1/N",
+      Strategy_1 == "Forward" ~ "Forward",
+      TRUE                    ~ Strategy_1
+    )
   )
 
 # plotting the benchmark policies
-
-bench %>% 
-  pivot_longer(
-    cols      = ends_with("_CumulativeReturn"),
-    names_to  = "Strategy",
-    values_to = "CumulativeReturn"
-  ) %>% 
-  ggplot(aes(YearMonth, CumulativeReturn, color = Strategy)) +
-    geom_line() +
-    theme_minimal() +
-    scale_colour_viridis_d(
-      option = "D",              # or "A", "B", "C", etc
-      begin  = 0.1,              # tweak start      [0,1]
-      end    = 0.9,              # tweak end        [0,1]
-      labels = c(
-        "Alpha-Based (EWMA)",
-        "Forward Signal",
-        "1/N",
-        "Alpha-Based (orig)",
-        "Alpha-Based (SMA)"
-      )) +
-    labs(title = "Benchmark Strategies Cumulative Returns",
-         x = "Date",
-         y = "Cumulative Return") +
-    theme(legend.position = "bottom", legend.title = element_blank()) +
-    annotate(geom = "text",
-             x = as.POSIXct("2020-03-11"),
-             # position the label text
-             y = -.04, label = "Pandemic declared",
-             fontface = "plain", angle = 90,
-             alpha = 0.5, vjust = 1.5) +
-    annotate(geom = "text",
-             x = as.POSIXct("2008-11-15"),
-             # position the label text
-             y = -.04, label = "Great Recession",
-             fontface = "plain", angle = 90,
-             alpha = 0.5, vjust = 1.5) + 
-    geom_vline(xintercept = as.POSIXct("2020-03-11"),
-               color = "darkgrey", lty = "dotted") +
-    geom_vline(xintercept = as.POSIXct("2008-11-15"),
-               color = "darkgrey", lty = "dotted")
-
+# Main plot
+ggplot(final_cume_all, aes(x = Date, y = CumulativeReturn, 
+                           color = interaction(Strategy_1, Source, sep = " - "))) +
+  geom_line() +
+  theme_minimal() +
+  scale_colour_viridis_d(
+    option = "D", 
+    begin = 0.1, 
+    end = 0.9,
+    name = NULL  # remove legend title
+  ) +
+  labs(
+    title = "Cumulative Returns of Alpha-Based and Benchmark Strategies",
+    x = "Date",
+    y = "Cumulative Return"
+  ) +
+  theme(
+    legend.position = "bottom",
+    legend.text = element_text(size = 10)
+  ) +
+  annotate(
+    geom = "text",
+    x = as.Date("2020-03-11"),
+    y = -.04, label = "Pandemic declared",
+    fontface = "plain", angle = 90,
+    alpha = 0.5, vjust = 1.5
+  ) +
+  annotate(
+    geom = "text",
+    x = as.Date("2008-11-15"),
+    y = -.04, label = "Great Recession",
+    fontface = "plain", angle = 90,
+    alpha = 0.5, vjust = 1.5
+  ) +
+  geom_vline(xintercept = as.Date("2020-03-11"),
+             color = "darkgrey", lty = "dotted") +
+  geom_vline(xintercept = as.Date("2008-11-15"),
+             color = "darkgrey", lty = "dotted")
 
 
 
