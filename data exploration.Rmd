@@ -1193,10 +1193,17 @@ anim <- ggplot(animate_alphas, aes(x = eps, y = Loss, color = Currency)) +
     geom_line() +
     facet_wrap(~Currency) +
     scale_color_viridis_d(option = "D") +
+    labs(
+        title = "Dynamic Asymmetric Loss Functions",
+        subtitle = "Date: {frame_time}",
+        x = "Error",
+        y = "L(Error)"
+    ) +
+    theme_minimal() +
     transition_time(Date) +
     ease_aes("linear")
 
-animate(anim, renderer = gifski_renderer("loss_animation.gif"))
+animate(anim, nframes = 200, fps = 10, renderer = gifski_renderer("loss_animation.gif"))
 
 ```
 
