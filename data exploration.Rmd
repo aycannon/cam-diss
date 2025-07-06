@@ -545,7 +545,7 @@ estimate_a2 <- function(currencies, wide_data, p = 2) {
 
     data_cur <- wide_data %>%
       transmute(
-        forecast_error = .data[[s_t1]] - .data[[f_col]],     # (sₜ₊₁ − fₜ)
+        forecast_error = .data[[s_t1]] - .data[[f_col]],     
         lag_error = lag(.data[[s_t1]] - .data[[f_col]]),     # lagged forecast error
         const = 1
       ) %>%
@@ -815,6 +815,8 @@ ggplot(alpha_sma, aes(x = Date)) +
     theme(legend.position = "bottom", 
           legend.title = element_blank())
 ```
+
+
 
 ```{r smoothed-alpha strats NEW}
 wide_smooth_ewma <- alpha_ewma %>%     # or whatever your SMA table is
@@ -1170,6 +1172,31 @@ ggplot(a_portfolio, aes(x = Date)) +
 
 
 
+
+```
+
+
+```{r Rolling alphas graphs animated}
+install.packages("gifski")
+library(gganimate)
+
+
+eps_seq <- seq(-1,1,length.out = 500)
+
+animate_alphas <- alpha_ewma_long %>%
+    filter(!is.na(Alpha)) %>%
+    dplyr::select(Date, Currency, Alpha) %>%
+    crossing(eps = eps_seq) %>%
+    mutate(Loss = quad_quad_loss(eps, Alpha))
+
+anim <- ggplot(animate_alphas, aes(x = eps, y = Loss, color = Currency)) +
+    geom_line() +
+    facet_wrap(~Currency) +
+    scale_color_viridis_d(option = "D") +
+    transition_time(Date) +
+    ease_aes("linear")
+
+animate(anim, renderer = gifski_renderer("loss_animation.gif"))
 
 ```
 
