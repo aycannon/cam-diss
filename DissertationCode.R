@@ -317,9 +317,8 @@ ggplot(alpha_portfolios, aes(x = Date, y = Cume_a)) +
 
 ## simple on smoothed data
 
-wide_smooth_ewma <- alpha_ewma %>%     # or whatever your SMA table is
+wide_smooth_ewma <- alpha_ewma %>%  
     arrange(Date) %>%
-    # 1a) compute a 10‐month EWMA of *each* currency's alpha
     mutate(
         across(
             .cols = -Date,
@@ -327,7 +326,6 @@ wide_smooth_ewma <- alpha_ewma %>%     # or whatever your SMA table is
             .names = "{.col}_EWMA"
         )
     ) %>%
-    # 1b) now compute the month‐to‐month change in each of those EWMA columns
     group_by() %>% # if you ever have multiple symbols, do group_by(symbol)
     mutate(
         across(
@@ -348,8 +346,7 @@ wide_smooth_sma <- alpha_sma %>%     # or whatever your SMA table is
             .names = "{.col}_SMA"
         )
     ) %>%
-    # 1b) now compute the month‐to‐month change in each of those EWMA columns
-    group_by() %>% # if you ever have multiple symbols, do group_by(symbol)
+    group_by() %>% 
     mutate(
         across(
             .cols = ends_with("_SMA"),
@@ -361,14 +358,12 @@ wide_smooth_sma <- alpha_sma %>%     # or whatever your SMA table is
 
 ## creating the weights for smoothed simple portfolios
 alpha_ewma_long <- wide_smooth_ewma %>%
-    # only melt the EWMA columns:
     pivot_longer(
         cols      = ends_with("_EWMA"),
         names_to  = "Currency",
         values_to = "Alpha"
     ) %>%
     mutate(
-        # drop that suffix:
         Currency = sub("_EWMA$", "", Currency)
     ) %>% 
     group_by(Currency) %>% 
@@ -377,7 +372,6 @@ alpha_ewma_long <- wide_smooth_ewma %>%
         Delta = Alpha - lag(Alpha)
     ) %>% 
     ungroup() %>% 
-    # now you have exactly one (Date, Currency) row
     mutate(
         dev   = abs(Alpha - 0.5),
         dir   = if_else(Alpha >  0.5, -1, +1),
@@ -403,7 +397,6 @@ alpha_sma_long <- wide_smooth_sma %>%
         values_to = "Alpha"
     ) %>%
     mutate(
-        # drop that suffix:
         Currency = sub("_SMA$", "", Currency)
     ) %>% 
     group_by(Currency) %>% 
@@ -490,3 +483,142 @@ ggplot(combined_cume, aes(x = Date, y = CumulativeReturn, color = Source, linety
          y = "Cumulative Return") +
     #scale_color_viridis_d(option = "E") +
     theme(legend.position = "bottom", legend.title = element_blank(), legend.spacing.x = unit(2, "cm"))
+
+
+
+#### ------------------ Geographical Strategies ----------------------------
+
+west <- c("CAD", "EUR", "GBP", "CHF")
+east <- c("JPY", "SGD", "KRW", "THB")
+g7 <- c("CAD", "EUR", "JPY", "GBP")
+
+compute_strategy <- function(wide_data, returns_long, cols, suffix = NULL) {
+    suffix_pattern <- if (!is.null(suffix)) paste0("_", suffix) else ""
+    
+    alpha_long <- wide_data %>%
+        pivot_longer(
+            cols = any_of(cols),
+            names_to = "Currency",
+            values_to = "Alpha"
+        ) %>%
+        group_by(Currency) %>%
+        arrange(Date) %>%
+        mutate(
+            Delta = Alpha - lag(Alpha)
+        ) %>%
+        ungroup() %>%
+        mutate(
+            dev   = abs(Alpha - 0.5),
+            dir   = if_else(Alpha >  0.5, -1, +1),
+            raw_a = dir * dev
+        ) %>%
+        group_by(Date) %>%
+        mutate(
+            w_a   = raw_a / sum(abs(raw_a), na.rm = TRUE),
+            n_pos = sum(Delta >  0, na.rm = TRUE),
+            n_neg = sum(Delta <  0, na.rm = TRUE),
+            w_d   = case_when(
+                Delta >  0 ~ -1/n_pos,
+                Delta <  0 ~ +1/n_neg,
+                TRUE       ~ 0
+            )
+        ) %>%
+        ungroup()
+    
+    alpha_long %>%
+        left_join(returns_long, by = c("Date", "Currency")) %>%
+        group_by(Date) %>%
+        summarise(
+            Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+            Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+            .groups = "drop"
+        ) %>%
+        mutate(
+            Cume_a = cumprod(1 + Ret_a) - 1,
+            Cume_d = cumprod(1 + Ret_d) - 1,
+            Date   = as.Date(Date)
+        )
+}
+
+
+### respecifying the non-smoothed alpha data
+
+wide_non_smooth <- alpha_weights %>%
+    dplyr::select(Date, Currency, Alpha) %>%
+    pivot_wider(names_from = Currency, values_from = Alpha)
+
+WEST_EWMA <- compute_strategy(wide_smooth_ewma, 
+                              returns_long, 
+                              suffix = "_EWMA", 
+                              cols = west)
+WEST_SMA <- compute_strategy(wide_smooth_sma, 
+                              returns_long, 
+                              suffix = "_SMA", 
+                              cols = west)
+WEST_NS <- compute_strategy(wide_non_smooth, 
+                             returns_long,
+                             cols = west)
+
+ASIA_EWMA <- compute_strategy(wide_smooth_ewma, 
+                              returns_long, 
+                              suffix = "_EWMA", 
+                              cols = east)
+ASIA_SMA <- compute_strategy(wide_smooth_sma, 
+                             returns_long, 
+                             suffix = "_SMA", 
+                             cols = east)
+ASIA_NS <- compute_strategy(wide_non_smooth, 
+                            returns_long,
+                            cols = east)
+G7_EWMA <- compute_strategy(wide_smooth_ewma, 
+                              returns_long, 
+                              suffix = "_EWMA", 
+                              cols = g7)
+G7_SMA <- compute_strategy(wide_smooth_sma, 
+                             returns_long, 
+                             suffix = "_SMA", 
+                             cols = g7)
+G7_NS <- compute_strategy(wide_non_smooth, 
+                            returns_long,
+                            cols = g7)
+ 
+### combining returns
+
+strat_dfs <- list(
+    G7_NS = G7_NS,
+    G7_SMA = G7_SMA,
+    G7_EWMA = G7_EWMA,
+    ASIA_NS = ASIA_NS,
+    ASIA_SMA = ASIA_SMA,
+    ASIA_EWMA = ASIA_EWMA,
+    WEST_NS = WEST_NS,
+    WEST_SMA = WEST_SMA,
+    WEST_EWMA = WEST_EWMA
+)
+
+combined_geo_strats <- bind_rows(strat_dfs, .id = "Source") %>%
+    pivot_longer(cols = c(Cume_a, Cume_d), names_to = "Strategy", values_to = "CumulativeReturn") %>%
+    separate(Source, into = c("Region", "Smoothing"), sep = "_")
+
+combined_geo_strats %>%
+    filter(Region == "G7") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+combined_geo_strats %>%
+    filter(Region == "ASIA") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+combined_geo_strats %>%
+    filter(Region == "WEST") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+
