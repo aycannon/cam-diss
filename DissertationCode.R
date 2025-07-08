@@ -621,4 +621,7 @@ combined_geo_strats %>%
     theme_minimal() +
     theme(legend.position = "bottom")
 
+## Regressions for CAPM? check alpha
+## return profiles - volatility, drawdown, Sharpe, etc
+
 
