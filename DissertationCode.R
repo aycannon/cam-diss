@@ -283,18 +283,31 @@ alpha_weights <- alpha_weights %>%
     ) %>%
     ungroup()
 
+## try to align the start dates so that we can compare the strategies fairly
+start_dates <- list(
+    NS = min(alpha_weights$Date, na.rm = TRUE),
+    EWMA = alpha_ewma_long %>% filter(!is.na(Alpha)) %>% summarise(min(Date)) %>% pull(),
+    SMA  = alpha_sma_long  %>% filter(!is.na(Alpha)) %>% summarise(min(Date)) %>% pull(),
+    EWMA_d = alpha_ewma_long %>% filter(!is.na(w_d)) %>% summarise(min(Date)) %>% pull(),
+    SMA_d  = alpha_sma_long  %>% filter(!is.na(w_d)) %>% summarise(min(Date)) %>% pull()
+)
+
+common_start <- max(unlist(start_dates))
+alpha_weights_filtered <- alpha_weights %>% filter(Date >= common_start)
+
+
 returns_long <- monthly_df1 %>%
     mutate(Date = YM) %>%
     dplyr::select(Date, ends_with("_excess")) %>%
     pivot_longer(-Date, names_to = "Currency", values_to = "ExcessReturn") %>%
     mutate(Currency = sub("_excess", "", Currency))
 
-alpha_portfolios <- alpha_weights %>%
+alpha_portfolios <- alpha_weights_filtered %>%
     left_join(returns_long, by = c("Date", "Currency")) %>%
     group_by(Date) %>%
     summarise(
-        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),   # delta-based return
-        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),    # alpha-based return
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
         .groups = "drop"
     ) %>%
     mutate(
@@ -423,7 +436,9 @@ alpha_sma_long <- wide_smooth_sma %>%
     ) %>%
     ungroup()
 
-a_ewma_portfolios <- alpha_ewma_long %>%
+
+
+a_ewma_portfolios <- alpha_ewma_long %>% filter(Date >= common_start) %>%
     left_join(returns_long, by = c("Date","Currency")) %>%
     group_by(Date) %>%
     summarise(
@@ -436,7 +451,7 @@ a_ewma_portfolios <- alpha_ewma_long %>%
     ) %>%
     mutate(Date = as.Date(Date))
 
-a_sma_portfolios <- alpha_sma_long %>%
+a_sma_portfolios <- alpha_sma_long %>% filter(Date >= common_start)%>%
     left_join(returns_long, by = c("Date","Currency")) %>%
     group_by(Date) %>%
     summarise(
@@ -495,7 +510,7 @@ g7 <- c("CAD", "EUR", "JPY", "GBP")
 compute_strategy <- function(wide_data, returns_long, cols, suffix = NULL) {
     suffix_pattern <- if (!is.null(suffix)) paste0("_", suffix) else ""
     
-    alpha_long <- wide_data %>%
+    alpha_long <- wide_data %>% filter(Date >= common_start) %>%
         pivot_longer(
             cols = any_of(cols),
             names_to = "Currency",
@@ -622,6 +637,19 @@ combined_geo_strats %>%
     theme(legend.position = "bottom")
 
 ## Regressions for CAPM? check alpha
-## return profiles - volatility, drawdown, Sharpe, etc
 
+
+## return profiles - volatility, drawdown, Sharpe, etc
+# using peerperformance package
+
+wide_perf <- bind_rows(strat_dfs, .id = "Source") %>%
+    pivot_longer(cols = c(Ret_a, Ret_d), names_to = "Type", values_to = "Return") %>%
+    mutate(Strategy = paste(Source, Type, sep = "_")) %>%
+    select(Date, Strategy, Return) %>%
+    pivot_wider(names_from = Strategy, values_from = Return) %>%
+    arrange(Date)
+
+sharpe(wide_perf[,-1])
+msharpe(wide_perf[,-1])
+alphaTesting(wide_perf[,3], wide_perf[,-1])
 

@@ -19,13 +19,9 @@ loss_df <- loss_df %>%
 # plot
 ggplot(loss_df, aes(x = eps, y = L, colour = factor(alpha))) +
     geom_line(alpha = 0.8) +
-    scale_colour_viridis_d(
-        name   = "alpha",
-        option = "D"
-    ) +
     labs(
-        x     = expression(epsilon),
-        y     = expression(L(epsilon))
+        x     = "Error",
+        y     = "L(Error)"
     ) +
     theme_minimal() +
     theme(legend.position = "bottom")
@@ -67,10 +63,6 @@ ggplot(alpha_sma%>% pivot_longer(-Date, names_to = "Currency",
 
 
 
-
-
-
-
 #### animated alphas
 library(gganimate)
 eps_seq <- seq(-1,1,length.out = 500)
@@ -95,3 +87,17 @@ anim <- ggplot(animate_alphas, aes(x = eps, y = Loss, color = Currency)) +
     ease_aes("linear") 
 
 animate(anim, nframes = 200, fps = 10, renderer = gifski_renderer("loss_animation.gif"))
+
+
+## animated returns??
+
+anim_g7 <- combined_geo_strats %>%
+    filter(Region == "G7") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom") +
+    transition_reveal(Date, keep_last=FALSE)+
+    ease_aes()
+
+animate(anim_g7, nframes = 200, fps = 10, renderer = gifski_renderer("G7_Strategies.gif"))
