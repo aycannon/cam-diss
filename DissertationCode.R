@@ -6,9 +6,10 @@ source("preamble.R")
 # data
 spot_df <- read_xlsx("data/data2.xlsx", sheet = "spot")
 fwd_df <- read_xlsx("data/data2.xlsx", sheet = "forward")
+join <- spot_df %>%
+    inner_join(fwd_df, by = "DATES")
 
-df <- spot_df %>%
-    inner_join(fwd_df, by = "DATES") %>%
+df <- join %>%
     mutate(
      Date = as.Date(DATES),
      .keep = "unused",
@@ -42,6 +43,17 @@ monthly <- df %>%
     mutate(
         across(-YM, log)
     )
+daily <- join %>%
+    mutate(
+        Date = as.Date(DATES),
+        EUR1M = 1/EUR1M,
+        GBP1M = 1/GBP1M,
+        .keep = "unused",
+        .before = "CHF"
+    ) %>%
+    mutate(
+        across(-Date, log)
+    )
 
 # lag the spot to create excess and premium
 
@@ -49,9 +61,17 @@ lag <- monthly %>%
     transmute(
         YM = YM %m+% months(1), 
         across(-YM, ~ ., .names = "{.col}_t1"))
+lag_daily <- daily %>%
+    transmute(
+        Date = Date %m+% months(1),
+        across(-Date, ~ ., .names = "{.col}_t1")
+    )
 
 monthly_df <- monthly %>%
     inner_join(lag, by = "YM")
+
+daily_df <- daily %>%
+    inner_join(lag_daily, by = "Date")
 
 spot_cols <- names(monthly)[str_detect(names(monthly), "^[A-Z]{3}$")]
 forward_cols <- names(monthly)[str_detect(names(monthly), "1M$")]
@@ -76,6 +96,21 @@ for (cur in spot_cols) {
     forward_name <- forward_map[[cur]]
     if (!is.null(forward_name)) {
         monthly_df1 <- monthly_df1 %>%
+            mutate(
+                !!paste0(cur, "_excess") := .data[[cur]] - .data[[paste0(cur, "_t1")]],
+                !!paste0(cur, "_prem") := .data[[paste0(cur, "_t1")]] - .data[[paste0(forward_name, "_t1")]]
+            )
+    } else {
+        warning("No forward mapping found for: ", cur)
+    }
+}
+
+daily2 <- daily_df
+
+for (cur in spot_cols) {
+    forward_name <- forward_map[[cur]]
+    if (!is.null(forward_name)) {
+        daily2 <- daily2 %>%
             mutate(
                 !!paste0(cur, "_excess") := .data[[cur]] - .data[[paste0(cur, "_t1")]],
                 !!paste0(cur, "_prem") := .data[[paste0(cur, "_t1")]] - .data[[paste0(forward_name, "_t1")]]
@@ -126,6 +161,63 @@ lmresults_df <- bind_rows(list(lm_data$CAD$summary, lm_data$CHF$summary,
                                lm_data$VND$summary))
 
 print(lmresults_df)
+
+# on daily data
+lm_daily <- list()
+
+for (cur in spot_cols) {
+    excess_var <- paste0(cur, "_excess")
+    prem_var   <- paste0(cur, "_prem")
+    
+    df <- daily2 %>%
+        dplyr::select(all_of(c(excess_var, prem_var))) %>%
+        filter(!is.na(.data[[excess_var]]), !is.na(.data[[prem_var]]))
+    
+    
+    model <- lm(as.formula(paste0(excess_var, " ~ ", prem_var)), data = df)
+    ht <- linearHypothesis(model, paste0(prem_var, " = 1"))
+    
+    summary_stats <- tibble(
+        Currency   = cur,
+        Intercept  = coef(model)[1],
+        SE.Intercept = summary(model)$coefficients[1, 2],
+        Slope      = coef(model)[2],
+        SE.Slope   = summary(model)$coefficients[2, 2],
+        R2         = summary(model)$r.squared,
+        N          = nobs(model),
+        p_val_HT   = ht$`Pr(>F)`[2]
+    )
+    
+    fitted_df <- tibble(
+        Currency = cur,
+        Fitted   = fitted(model),
+        Residual = resid(model)
+    )
+    
+    
+    
+    lm_daily[[cur]] <- list(summary = summary_stats, residuals = fitted_df)
+    cat("-------------", cur, "----------- \n")
+    print(linearHypothesis(model, paste0(prem_var, " = 1")))
+}
+
+lm_daily_df <- bind_rows(list(lm_daily$CAD$summary, lm_daily$CHF$summary,
+                              lm_daily$EUR$summary, lm_daily$GBP$summary,
+                              lm_daily$JPY$summary, lm_daily$KRW$summary,
+                              lm_daily$SGD$summary, lm_daily$THB$summary,
+                              lm_daily$VND$summary))
+
+lm_daily_df <- lm_daily_df %>%
+    mutate(
+        Sig = case_when(
+            p_val_HT < 0.01 ~ "***",  # significant at 1%
+            p_val_HT < 0.05 ~ "**",   # significant at 5%
+            p_val_HT < 0.10 ~ "*",    # significant at 10%
+            TRUE            ~ ""      # not significant
+        )
+    )
+
+print(lm_daily_df)
 
 
 ###------------------------------ GMM Alpha Estimation---------------------------
