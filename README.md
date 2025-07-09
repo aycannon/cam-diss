@@ -31,3 +31,7 @@ Using Bloomberg data to pull this for a larger set of countries. The countries i
 We can see how the market level loss functions vary over time only slightly, while all staying consistent in the systematic overprediction of the appreciation of the USD.
 
 ![Loss Function Animation](loss_animation.gif)
+
+here's another stupid plot of the returns of our G7 strategies over time:
+
+![G7 Strats](G7_Strategies.gif)
