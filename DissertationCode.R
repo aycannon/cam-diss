@@ -55,6 +55,8 @@ daily <- join %>%
         across(-Date, log)
     )
 
+summarise(across(daily))
+
 # lag the spot to create excess and premium
 
 lag <- monthly %>%
@@ -218,6 +220,16 @@ lm_daily_df <- lm_daily_df %>%
     )
 
 print(lm_daily_df)
+
+ggplot(lm_daily_df[1:nrow(lm_daily_df)-1,], aes(x = Currency, y = Slope)) +
+    geom_point() +
+    geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
+    geom_errorbar(aes(ymin = Slope - 1.96 * SE.Slope,
+                      ymax = Slope + 1.96 * SE.Slope),
+                  width = 0.1) +
+    labs(x = "Currency", 
+         y = "Slope Coefficient") +
+    theme_minimal()
 
 
 ###------------------------------ GMM Alpha Estimation---------------------------
