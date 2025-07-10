@@ -55,7 +55,7 @@ daily <- join %>%
         across(-Date, log)
     )
 
-summarise(across(daily))
+
 
 # lag the spot to create excess and premium
 
@@ -387,52 +387,6 @@ alpha_weights <- alpha_weights %>%
     ) %>%
     ungroup()
 
-## try to align the start dates so that we can compare the strategies fairly
-start_dates <- list(
-    NS = min(alpha_weights$Date, na.rm = TRUE),
-    EWMA = alpha_ewma_long %>% filter(!is.na(Alpha)) %>% summarise(min(Date)) %>% pull(),
-    SMA  = alpha_sma_long  %>% filter(!is.na(Alpha)) %>% summarise(min(Date)) %>% pull(),
-    EWMA_d = alpha_ewma_long %>% filter(!is.na(w_d)) %>% summarise(min(Date)) %>% pull(),
-    SMA_d  = alpha_sma_long  %>% filter(!is.na(w_d)) %>% summarise(min(Date)) %>% pull()
-)
-
-common_start <- max(unlist(start_dates))
-alpha_weights_filtered <- alpha_weights %>% filter(Date >= common_start)
-
-
-returns_long <- monthly_df1 %>%
-    mutate(Date = YM) %>%
-    dplyr::select(Date, ends_with("_excess")) %>%
-    pivot_longer(-Date, names_to = "Currency", values_to = "ExcessReturn") %>%
-    mutate(Currency = sub("_excess", "", Currency))
-
-alpha_portfolios <- alpha_weights_filtered %>%
-    left_join(returns_long, by = c("Date", "Currency")) %>%
-    group_by(Date) %>%
-    summarise(
-        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
-        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
-        .groups = "drop"
-    ) %>%
-    mutate(
-        Cume_d = cumprod(1 + Ret_d) - 1,
-        Cume_a = cumprod(1 + Ret_a) - 1,
-        Date = as.Date(Date)
-    )
-
-
-## plotting simple strat - non-smoothed
-ggplot(alpha_portfolios, aes(x = Date, y = Cume_a)) +
-    geom_line() +
-    labs(title = "Cumulative Returns of Alpha-Based Portfolio",
-         x = "Date",
-         y = "Cumulative Return") +
-    theme_minimal() +
-    theme(legend.position = "bottom") +
-    scale_colour_viridis_d(option = "D") 
-
-
-## simple on smoothed data
 
 wide_smooth_ewma <- alpha_ewma %>%  
     arrange(Date) %>%
@@ -540,6 +494,54 @@ alpha_sma_long <- wide_smooth_sma %>%
     ) %>%
     ungroup()
 
+
+
+## try to align the start dates so that we can compare the strategies fairly
+start_dates <- list(
+    NS = min(alpha_weights$Date, na.rm = TRUE),
+    EWMA = alpha_ewma_long %>% filter(!is.na(Alpha)) %>% summarise(min(Date)) %>% pull(),
+    SMA  = alpha_sma_long  %>% filter(!is.na(Alpha)) %>% summarise(min(Date)) %>% pull(),
+    EWMA_d = alpha_ewma_long %>% filter(!is.na(w_d)) %>% summarise(min(Date)) %>% pull(),
+    SMA_d  = alpha_sma_long  %>% filter(!is.na(w_d)) %>% summarise(min(Date)) %>% pull()
+)
+
+common_start <- max(unlist(start_dates))
+alpha_weights_filtered <- alpha_weights %>% filter(Date >= common_start)
+
+
+returns_long <- monthly_df1 %>%
+    mutate(Date = YM) %>%
+    dplyr::select(Date, ends_with("_excess")) %>%
+    pivot_longer(-Date, names_to = "Currency", values_to = "ExcessReturn") %>%
+    mutate(Currency = sub("_excess", "", Currency))
+
+alpha_portfolios <- alpha_weights_filtered %>%
+    left_join(returns_long, by = c("Date", "Currency")) %>%
+    group_by(Date) %>%
+    summarise(
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+        .groups = "drop"
+    ) %>%
+    mutate(
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_a = cumprod(1 + Ret_a) - 1,
+        Date = as.Date(Date)
+    )
+
+
+## plotting simple strat - non-smoothed
+ggplot(alpha_portfolios, aes(x = Date, y = Cume_a)) +
+    geom_line() +
+    labs(title = "Cumulative Returns of Alpha-Based Portfolio",
+         x = "Date",
+         y = "Cumulative Return") +
+    theme_minimal() +
+    theme(legend.position = "bottom") +
+    scale_colour_viridis_d(option = "D") 
+
+
+## simple on smoothed data
 
 
 a_ewma_portfolios <- alpha_ewma_long %>% filter(Date >= common_start) %>%
@@ -753,7 +755,14 @@ wide_perf <- bind_rows(strat_dfs, .id = "Source") %>%
     pivot_wider(names_from = Strategy, values_from = Return) %>%
     arrange(Date)
 
+ret_xts <- xts(wide_perf[,-1], order.by = wide_perf$Date)
+
+alphaScreening(X = ret_xts)
+
 sharpe(wide_perf[,-1])
 msharpe(wide_perf[,-1])
-alphaTesting(wide_perf[,3], wide_perf[,-1])
+alphaTesting(wide_perf[,"G7_NS_Ret_d"], wide_perf[,"ASIA_NS_Ret_d"])
+alphaScreening()
+
+## loop for comparing strategies
 
