@@ -229,7 +229,8 @@ ggplot(lm_daily_df[1:nrow(lm_daily_df)-1,], aes(x = Currency, y = Slope, color =
                   width = 0.1) +
     labs(x = "Currency", 
          y = "Slope Coefficient") +
-    theme_minimal()
+    theme_minimal() +
+    theme(legend.position = "none")
 
 ggsave( file = "betaCoefficients.png",
         path = "plots/")
@@ -961,7 +962,7 @@ wide_perf <- bind_rows(strat_dfs, .id = "Source") %>%
 
 ret_xts <- xts(wide_perf[,-1], order.by = wide_perf$Date)
 
-alphaScreen <- alphaScreening(X = ret_xts)
+alphaScreen <- alphaScreening(X = ret_xts, control = c("nCore" = parallel::detectCores() - 1))
 
 Sharpe <- sharpe(wide_perf[,-1])
 mSharpe <- msharpe(wide_perf[,-1])
@@ -1417,7 +1418,7 @@ wide_perf_i1 <- bind_rows(strat_dfs_i1, .id = "Source") %>%
 
 ret_xts_i1 <- xts(wide_perf_i1[,-1], order.by = wide_perf_i1$Date)
 
-alphaScreen_i1 <- alphaScreening(X = ret_xts_i1)
+alphaScreen_i1 <- alphaScreening(X = ret_xts_i1, , control = c("nCore" = parallel::detectCores() - 1))
 
 Sharpe_i1 <- sharpe(wide_perf_i1[,-1])
 mSharpe_i1 <- msharpe(wide_perf_i1[,-1])
@@ -1871,7 +1872,7 @@ wide_perf_i2 <- bind_rows(strat_dfs_i2, .id = "Source") %>%
 
 ret_xts_i2 <- xts(wide_perf_i2[,-1], order.by = wide_perf_i2$Date)
 
-alphaScreening(X = ret_xts_i2)
+alphaScreen_i2 <- alphaScreening(X = ret_xts_i2, control = c("nCore" = parallel::detectCores() - 1))
 
 sharpe(wide_perf_i2[,-1])
 msharpe(wide_perf_i2[,-1])
@@ -2332,7 +2333,7 @@ wide_perf_i3 <- bind_rows(strat_dfs_i3, .id = "Source") %>%
 
 ret_xts_i3 <- xts(wide_perf_i3[,-1], order.by = wide_perf_i3$Date)
 
-alphaScreening(X = ret_xts_i3)
+alphaScreen_i3 <- alphaScreening(X = ret_xts_i3, control = c("nCore" = parallel::detectCores() - 1))
 
 sharpe(wide_perf_i3[,-1])
 msharpe(wide_perf_i3[,-1])
