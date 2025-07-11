@@ -350,10 +350,11 @@ ggplot(smooth_alpha %>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D") +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha time series.png")
+          legend.title = element_blank())
+
+    ggsave("alpha time series.png",
+           path = "plots/")
 
 ggplot(alpha_ewma%>% pivot_longer(-Date, names_to = "Currency",
                                   values_to = "Alpha"),
@@ -362,10 +363,10 @@ ggplot(alpha_ewma%>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D")  +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha EWMA time series.png")
+          legend.title = element_blank())
+    ggsave("alpha EWMA time series.png",
+           path = "plots/")
 
 ggplot(alpha_sma%>% pivot_longer(-Date, names_to = "Currency",
                                  values_to = "Alpha"), aes(x = Date, y = Alpha, color = Currency)) +
@@ -373,10 +374,10 @@ ggplot(alpha_sma%>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D") +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha SMA time series.png")
+          legend.title = element_blank())
+    ggsave("alpha SMA time series.png",
+           path = "plots/")
 
 # plotting alpha i1
 
@@ -387,10 +388,10 @@ ggplot(smooth_alpha_i1 %>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D") +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha Inst 1 time series.png")
+          legend.title = element_blank())
+    ggsave("alpha Inst 1 time series.png",
+           path = "plots/")
 
 ggplot(alpha_ewma_i1%>% pivot_longer(-Date, names_to = "Currency",
                                   values_to = "Alpha"),
@@ -399,10 +400,10 @@ ggplot(alpha_ewma_i1%>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D")  +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha Inst 1 EWMA time series.png")
+          legend.title = element_blank())
+    ggsave("alpha Inst 1 EWMA time series.png",
+           path = "plots/")
 
 ggplot(alpha_sma_i1%>% pivot_longer(-Date, names_to = "Currency",
                                  values_to = "Alpha"), aes(x = Date, y = Alpha, color = Currency)) +
@@ -410,10 +411,10 @@ ggplot(alpha_sma_i1%>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D") +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha Inst 1 SMA time series.png")
+          legend.title = element_blank())
+    ggsave("alpha Inst 1 SMA time series.png",
+           path = "plots/")
 
 # plottiong alpha i2
 
@@ -424,10 +425,10 @@ ggplot(smooth_alpha_i2 %>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D") +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha Inst 2 time series.png")
+          legend.title = element_blank())
+    ggsave("alpha Inst 2 time series.png",
+           path = "plots/")
 
 ggplot(alpha_ewma_i2%>% pivot_longer(-Date, names_to = "Currency",
                                      values_to = "Alpha"),
@@ -436,10 +437,10 @@ ggplot(alpha_ewma_i2%>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D")  +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha Inst 2 EWMA time series.png")
+          legend.title = element_blank())
+    ggsave("alpha Inst 2 EWMA time series.png",
+           path = "plots/")
 
 ggplot(alpha_sma_i2%>% pivot_longer(-Date, names_to = "Currency",
                                     values_to = "Alpha"), aes(x = Date, y = Alpha, color = Currency)) +
@@ -447,10 +448,10 @@ ggplot(alpha_sma_i2%>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D") +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha Inst 2 SMA time series.png")
+          legend.title = element_blank())
+    ggsave("alpha Inst 2 SMA time series.png",
+           path = "plots/")
 
 # plotting i3
 
@@ -461,10 +462,10 @@ ggplot(smooth_alpha_i3 %>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D") +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha Inst 3 time series.png")
+          legend.title = element_blank())
+    ggsave("alpha Inst 3 time series.png",
+           path = "plots/")
 
 ggplot(alpha_ewma_i3%>% pivot_longer(-Date, names_to = "Currency",
                                      values_to = "Alpha"),
@@ -473,10 +474,10 @@ ggplot(alpha_ewma_i3%>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D")  +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha Inst 3 EWMA time series.png")
+          legend.title = element_blank())
+    ggsave("alpha Inst 3 EWMA time series.png",
+           path = "plots/")
 
 ggplot(alpha_sma_i3%>% pivot_longer(-Date, names_to = "Currency",
                                     values_to = "Alpha"), aes(x = Date, y = Alpha, color = Currency)) +
@@ -484,13 +485,14 @@ ggplot(alpha_sma_i3%>% pivot_longer(-Date, names_to = "Currency",
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    scale_colour_viridis_d("Currency", option = "D") +
     theme(legend.position = "bottom", 
-          legend.title = element_blank()) +
-    ggsave("alpha Inst 3 SMA time series.png")
+          legend.title = element_blank())
+    ggsave("alpha Inst 3 SMA time series.png",
+           path = "plots/")
 
-## Simple Portfolio Allocation:
+## --- Portfolio Allocation: No instruments ------------------------------------ 
 
+### -------- Creating Weights ----
 alpha_long <- as.data.frame(alpha_matrix) %>%
     rownames_to_column("Date") %>%
     pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
@@ -501,7 +503,6 @@ alpha_long <- as.data.frame(alpha_matrix) %>%
            Delta = Alpha - dplyr::lag(Alpha)
     )
 
-# creating the weights
 alpha_weights <- alpha_long %>%
     group_by(Date) %>%
     mutate(
@@ -520,20 +521,19 @@ alpha_weights <- alpha_long %>%
             TRUE       ~   0
         )
     ) %>%
-    ungroup()
-
-alpha_weights <- alpha_weights %>%
-    mutate(
-        dev   = abs(Alpha - 0.5),
-        dir   = if_else(Alpha >  0.5, -1, +1),
-        raw_a = dir * dev
-    ) %>%
+    ungroup() %>%
     group_by(Date) %>%
+    arrange(Date, Alpha) %>%
     mutate(
-        w_a = raw_a / sum(abs(raw_a), na.rm = TRUE)  # alpha-based weights
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n / 2) ~ +1 / floor(n / 2),  # Long lowest alphas
+            rank >  floor(n / 2) ~ -1 / ceiling(n / 2), # Short highest alphas
+            TRUE                 ~ 0
+        )
     ) %>%
     ungroup()
-
 
 wide_smooth_ewma <- alpha_ewma %>%  
     arrange(Date) %>%
@@ -574,7 +574,6 @@ wide_smooth_sma <- alpha_sma %>%     # or whatever your SMA table is
     ) %>%
     ungroup()
 
-## creating the weights for smoothed simple portfolios
 alpha_ewma_long <- wide_smooth_ewma %>%
     pivot_longer(
         cols      = ends_with("_EWMA"),
@@ -604,6 +603,18 @@ alpha_ewma_long <- wide_smooth_ewma %>%
             Delta >  0 ~  -1/n_pos,
             Delta <  0 ~  +1/n_neg,
             TRUE       ~   0
+        )
+    ) %>%
+    ungroup() %>%
+    group_by(Date) %>%
+    arrange(Date, Alpha) %>%
+    mutate(
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n / 2) ~ +1 / floor(n / 2),  # Long lowest alphas
+            rank >  floor(n / 2) ~ -1 / ceiling(n / 2), # Short highest alphas
+            TRUE                 ~ 0
         )
     ) %>%
     ungroup()
@@ -639,6 +650,18 @@ alpha_sma_long <- wide_smooth_sma %>%
             TRUE       ~   0
         )
     ) %>%
+    ungroup() %>%
+    group_by(Date) %>%
+    arrange(Date, Alpha) %>%
+    mutate(
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n / 2) ~ +1 / floor(n / 2),  # Long lowest alphas
+            rank >  floor(n / 2) ~ -1 / ceiling(n / 2), # Short highest alphas
+            TRUE                 ~ 0
+        )
+    ) %>%
     ungroup()
 
 
@@ -655,6 +678,7 @@ start_dates <- list(
 common_start <- max(unlist(start_dates))
 alpha_weights_filtered <- alpha_weights %>% filter(Date >= common_start)
 
+### -------- Calculating Returns of simple strats ----
 
 returns_long <- monthly_df1 %>%
     mutate(Date = YM) %>%
@@ -668,11 +692,13 @@ alpha_portfolios <- alpha_weights_filtered %>%
     summarise(
         Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
         Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
         .groups = "drop"
     ) %>%
     mutate(
         Cume_d = cumprod(1 + Ret_d) - 1,
         Cume_a = cumprod(1 + Ret_a) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
         Date = as.Date(Date)
     )
 
@@ -684,60 +710,64 @@ ggplot(alpha_portfolios, aes(x = Date, y = Cume_a)) +
          x = "Date",
          y = "Cumulative Return") +
     theme_minimal() +
-    theme(legend.position = "bottom") +
-    scale_colour_viridis_d(option = "D") 
+    theme(legend.position = "bottom") 
 
 
-## simple on smoothed data
-
+### smoothed data
 
 a_ewma_portfolios <- alpha_ewma_long %>% filter(Date >= common_start) %>%
     left_join(returns_long, by = c("Date","Currency")) %>%
     group_by(Date) %>%
     summarise(
         Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
-        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE)
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
     ) %>%
     mutate(
         Cume_a = cumprod(1 + Ret_a) - 1,
-        Cume_d = cumprod(1 + Ret_d) - 1
-    ) %>%
-    mutate(Date = as.Date(Date))
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
+        Date = as.Date(Date)
+    ) 
 
 a_sma_portfolios <- alpha_sma_long %>% filter(Date >= common_start)%>%
     left_join(returns_long, by = c("Date","Currency")) %>%
     group_by(Date) %>%
     summarise(
         Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
-        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE)
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE)
     ) %>%
     mutate(
         Cume_a = cumprod(1 + Ret_a) - 1,
-        Cume_d = cumprod(1 + Ret_d) - 1
-    )  %>%
-    mutate(Date = as.Date(Date))
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
+        Date = as.Date(Date)
+    ) 
 
 ## plotting all strats
 
 non_smoothed_long <- alpha_portfolios %>%
     mutate(Source = "Non-smoothed") %>%
-    dplyr::select(Date, Cume_a, Cume_d, Source)
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
 
 ewma_long <- a_ewma_portfolios %>%
     mutate(Source = "EWMA") %>%
-    dplyr::select(Date, Cume_a, Cume_d, Source)
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
 
 sma_long <- a_sma_portfolios %>%
     mutate(Source = "SMA") %>%
-    dplyr::select(Date, Cume_a, Cume_d, Source)
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
+
 
 # Combine all into one data frame
 combined_cume <- bind_rows(non_smoothed_long, ewma_long, sma_long) %>%
-    pivot_longer(cols = c(Cume_a, Cume_d), names_to = "Strategy", values_to = "CumulativeReturn") %>%
+    pivot_longer(cols = c(Cume_a, Cume_d, Cume_r), names_to = "Strategy", values_to = "CumulativeReturn") %>%
     mutate(
         Strategy = case_when(
             Strategy == "Cume_a" ~ "Alpha-based",
             Strategy == "Cume_d" ~ "Delta-based",
+            Strategy == "Cume_r" ~ "Ranked Alphas",
             TRUE ~ Strategy
         )
     )
@@ -749,12 +779,12 @@ ggplot(combined_cume, aes(x = Date, y = CumulativeReturn, color = Source, linety
     theme_minimal() +
     labs(x = "Date", 
          y = "Cumulative Return") +
-    #scale_color_viridis_d(option = "E") +
     theme(legend.position = "bottom", legend.title = element_blank(), legend.spacing.x = unit(2, "cm"))
 
+ggsave(file = "allRegionsAllStrats.png",
+           path = "plots/")
 
-
-#### ------------------ Geographical Strategies ----------------------------
+#### ------- Geographical Strategies ----------------------------
 
 west <- c("CAD", "EUR", "GBP", "CHF")
 east <- c("JPY", "SGD", "KRW", "THB")
@@ -790,7 +820,19 @@ compute_strategy <- function(wide_data, returns_long, cols, suffix = NULL) {
                 Delta <  0 ~ +1/n_neg,
                 TRUE       ~ 0
             )
-        ) %>%
+        ) %>% 
+        ungroup() %>%
+        group_by(Date) %>%
+        arrange(Date, Alpha) %>%
+        mutate(
+            rank = row_number(),
+            n = n(),
+            w_r = case_when(
+                rank <= floor(n/2) ~ +1/floor(n/2),
+                rank > floor(n/2) ~ -1/ceiling(n/2),
+                T ~ 0
+            )
+            ) %>%
         ungroup()
     
     alpha_long %>%
@@ -799,11 +841,13 @@ compute_strategy <- function(wide_data, returns_long, cols, suffix = NULL) {
         summarise(
             Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
             Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+            Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
             .groups = "drop"
         ) %>%
         mutate(
             Cume_a = cumprod(1 + Ret_a) - 1,
             Cume_d = cumprod(1 + Ret_d) - 1,
+            Cume_r = cumprod(1 + Ret_r) - 1,
             Date   = as.Date(Date)
         )
 }
@@ -865,8 +909,16 @@ strat_dfs <- list(
 )
 
 combined_geo_strats <- bind_rows(strat_dfs, .id = "Source") %>%
-    pivot_longer(cols = c(Cume_a, Cume_d), names_to = "Strategy", values_to = "CumulativeReturn") %>%
-    separate(Source, into = c("Region", "Smoothing"), sep = "_")
+    pivot_longer(cols = c(Cume_a, Cume_d, Cume_r), names_to = "Strategy", values_to = "CumulativeReturn") %>%
+    separate(Source, into = c("Region", "Smoothing"), sep = "_") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "Cume_a" ~ "Alpha-based",
+            Strategy == "Cume_d" ~ "Delta-based",
+            Strategy == "Cume_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    )
 
 combined_geo_strats %>%
     filter(Region == "G7") %>%
@@ -874,6 +926,8 @@ combined_geo_strats %>%
     geom_line() +
     theme_minimal() +
     theme(legend.position = "bottom")
+ggsave(file = "G7I0.png",
+       path = "plots/")
 
 combined_geo_strats %>%
     filter(Region == "ASIA") %>%
@@ -881,6 +935,8 @@ combined_geo_strats %>%
     geom_line() +
     theme_minimal() +
     theme(legend.position = "bottom")
+ggsave(file = "ASIAI0.png",
+       path = "plots/")
 
 combined_geo_strats %>%
     filter(Region == "WEST") %>%
@@ -888,13 +944,13 @@ combined_geo_strats %>%
     geom_line() +
     theme_minimal() +
     theme(legend.position = "bottom")
+ggsave(file = "WESTI0.png",
+       path = "plots/")
 
-
-## return profiles - volatility, drawdown, Sharpe, etc
 # using peerperformance package
 
 wide_perf <- bind_rows(strat_dfs, .id = "Source") %>%
-    pivot_longer(cols = c(Ret_a, Ret_d), names_to = "Type", values_to = "Return") %>%
+    pivot_longer(cols = c(Ret_a, Ret_d, Ret_r), names_to = "Type", values_to = "Return") %>%
     mutate(Strategy = paste(Source, Type, sep = "_")) %>%
     select(Date, Strategy, Return) %>%
     pivot_wider(names_from = Strategy, values_from = Return) %>%
@@ -902,21 +958,1438 @@ wide_perf <- bind_rows(strat_dfs, .id = "Source") %>%
 
 ret_xts <- xts(wide_perf[,-1], order.by = wide_perf$Date)
 
-alphaScreening(X = ret_xts)
+alphaScreen <- alphaScreening(X = ret_xts)
 
-sharpe(wide_perf[,-1])
-msharpe(wide_perf[,-1])
-alphaTesting(wide_perf[,"G7_NS_Ret_d"], wide_perf[,"ASIA_NS_Ret_d"])
-alphaScreening()
+Sharpe <- sharpe(wide_perf[,-1])
+mSharpe <- msharpe(wide_perf[,-1])
 
 ## plotting weights
 
 alpha_ewma_long %>%
-    pivot_longer(cols = c(w_a, w_d), names_to = "Strategy", values_to = "Weight") %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
     ggplot(aes(x = Date, y = Weight, fill = Currency)) +
     geom_area(position = "stack") +
     facet_wrap(~ Strategy, ncol = 1) +
-    scale_fill_viridis_d(option = "D") +
     theme_minimal() +
-    labs(title = "Portfolio Weights Over Time", y = "Weight", x = "Date") +
+    labs( y = "Weight", x = "Date") +
     theme(legend.position = "bottom")
+
+ggsave(file = "WeightsEWMAI0.png",
+       path = "plots/")
+
+alpha_sma_long %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    theme_minimal() +
+    labs(y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
+
+ggsave(file = "WeightsSMAI0.png",
+       path = "plots/")
+
+alpha_weights %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    theme_minimal() +
+    labs(y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
+
+ggsave(file = "WeightsNSI0.png",
+       path = "plots/")
+
+## --- Portfolio Allocation: Instrument 1 (constant + lagged Error) ----
+
+### -------- Creating Weights ----
+alpha_long_i1 <- as.data.frame(alpha_matrix_i1) %>%
+    rownames_to_column("Date") %>%
+    pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
+    mutate(Date = as.Date(Date, format = "%Y-%m-%d"),
+           Alpha = as.numeric(Alpha),
+           Deviation = abs(Alpha - 0.5),                    
+           Direction = ifelse(Alpha < 0.5, "Long", "Short"),
+           Delta = Alpha - dplyr::lag(Alpha)
+    )
+
+alpha_weights_i1 <- alpha_long_i1 %>%
+    group_by(Date) %>%
+    mutate(
+        dev   = abs(Alpha - 0.5),
+        dir   = if_else(Alpha >  0.5, -1, +1),
+        raw_a = dir * dev
+    ) %>%
+    group_by(Date) %>%
+    mutate(
+        w_a   = raw_a / sum(abs(raw_a), na.rm = TRUE),
+        n_pos = sum(Delta >  0, na.rm = TRUE),
+        n_neg = sum(Delta <  0, na.rm = TRUE),
+        w_d   = case_when(
+            Delta >  0 ~  -1/n_pos,
+            Delta <  0 ~  +1/n_neg,
+            TRUE       ~   0
+        )
+    ) %>%
+    ungroup() %>%
+    group_by(Date) %>%
+    arrange(Date, Alpha) %>%
+    mutate(
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n/2) ~ +1/floor(n/2),
+            rank > floor(n/2) ~ -1/ceiling(n/2),
+            T ~ 0
+        )
+    ) %>%
+    ungroup()
+
+wide_smooth_ewma_i1 <- alpha_ewma_i1 %>%  
+    arrange(Date) %>%
+    mutate(
+        across(
+            .cols = -Date,
+            .fns  = ~ EMA(.x, n = 10),
+            .names = "{.col}_EWMA"
+        )
+    ) %>%
+    group_by() %>% # if you ever have multiple symbols, do group_by(symbol)
+    mutate(
+        across(
+            .cols = ends_with("_EWMA"),
+            .fns  = ~ .x - lag(.x),
+            .names = "{.col}.d"
+        )
+    ) %>%
+    ungroup()
+
+wide_smooth_sma_i1 <- alpha_sma_i1 %>%     # or whatever your SMA table is
+    arrange(Date) %>%
+    # 1a) compute a 10‐month EWMA of *each* currency's alpha
+    mutate(
+        across(
+            .cols = -Date,
+            .fns  = ~ SMA(.x, n = 10),
+            .names = "{.col}_SMA"
+        )
+    ) %>%
+    group_by() %>% 
+    mutate(
+        across(
+            .cols = ends_with("_SMA"),
+            .fns  = ~ .x - lag(.x),
+            .names = "{.col}.d"
+        )
+    ) %>%
+    ungroup()
+
+alpha_ewma_long_i1 <- wide_smooth_ewma_i1 %>%
+    pivot_longer(
+        cols      = ends_with("_EWMA"),
+        names_to  = "Currency",
+        values_to = "Alpha"
+    ) %>%
+    mutate(
+        Currency = sub("_EWMA$", "", Currency)
+    ) %>% 
+    group_by(Currency) %>% 
+    arrange(Date) %>% 
+    mutate(
+        Delta = Alpha - lag(Alpha)
+    ) %>% 
+    ungroup() %>% 
+    mutate(
+        dev   = abs(Alpha - 0.5),
+        dir   = if_else(Alpha >  0.5, -1, +1),
+        raw_a = dir * dev
+    ) %>%
+    group_by(Date) %>%
+    mutate(
+        w_a   = raw_a / sum(abs(raw_a), na.rm = TRUE),
+        n_pos = sum(Delta >  0, na.rm = TRUE),
+        n_neg = sum(Delta <  0, na.rm = TRUE),
+        w_d   = case_when(
+            Delta >  0 ~  -1/n_pos,
+            Delta <  0 ~  +1/n_neg,
+            TRUE       ~   0
+        )
+    ) %>%
+    ungroup() %>%
+    group_by(Date) %>%
+    arrange(Date, Alpha) %>%
+    mutate(
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n/2) ~ +1/floor(n/2),
+            rank > floor(n/2) ~ -1/ceiling(n/2),
+            T ~ 0
+        )
+    ) %>%
+    ungroup()
+
+alpha_sma_long_i1 <- wide_smooth_sma_i1 %>%
+    pivot_longer(
+        cols      = ends_with("_SMA"),
+        names_to  = "Currency",
+        values_to = "Alpha"
+    ) %>%
+    mutate(
+        Currency = sub("_SMA$", "", Currency)
+    ) %>% 
+    group_by(Currency) %>% 
+    arrange(Date) %>% 
+    mutate(
+        Delta = Alpha - lag(Alpha)
+    ) %>% 
+    ungroup() %>% 
+    mutate(
+        dev   = abs(Alpha - 0.5),
+        dir   = if_else(Alpha >  0.5, -1, +1),
+        raw_a = dir * dev
+    ) %>%
+    group_by(Date) %>%
+    mutate(
+        w_a   = raw_a / sum(abs(raw_a), na.rm = TRUE),
+        n_pos = sum(Delta >  0, na.rm = TRUE),
+        n_neg = sum(Delta <  0, na.rm = TRUE),
+        w_d   = case_when(
+            Delta >  0 ~  -1/n_pos,
+            Delta <  0 ~  +1/n_neg,
+            TRUE       ~   0
+        )
+    ) %>%
+    ungroup() %>%
+    group_by(Date) %>%
+    arrange(Date, Alpha) %>%
+    mutate(
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n/2) ~ +1/floor(n/2),
+            rank > floor(n/2) ~ -1/ceiling(n/2),
+            T ~ 0
+        )
+    ) %>%
+    ungroup()
+
+
+alpha_weights_filtered_i1 <- alpha_weights_i1 %>% filter(Date >= common_start)
+
+### -------- Calculating Returns of simple strats ----
+
+alpha_portfolios_i1 <- alpha_weights_filtered_i1 %>%
+    left_join(returns_long, by = c("Date", "Currency")) %>%
+    group_by(Date) %>%
+    summarise(
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
+        .groups = "drop"
+    ) %>%
+    mutate(
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_a = cumprod(1 + Ret_a) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
+        Date = as.Date(Date)
+    )
+
+
+## plotting simple strat - non-smoothed
+ggplot(alpha_portfolios_i1, aes(x = Date, y = Cume_a)) +
+    geom_line() +
+    labs(title = "Cumulative Returns of Alpha-Based Portfolio",
+         x = "Date",
+         y = "Cumulative Return") +
+    theme_minimal() +
+    theme(legend.position = "bottom") 
+
+
+### smoothed data
+
+a_ewma_portfolios_i1 <- alpha_ewma_long_i1 %>% filter(Date >= common_start) %>%
+    left_join(returns_long, by = c("Date","Currency")) %>%
+    group_by(Date) %>%
+    summarise(
+        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
+    ) %>%
+    mutate(
+        Cume_a = cumprod(1 + Ret_a) - 1,
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
+        Date = as.Date(Date)
+    ) 
+
+a_sma_portfolios_i1 <- alpha_sma_long_i1 %>% filter(Date >= common_start)%>%
+    left_join(returns_long, by = c("Date","Currency")) %>%
+    group_by(Date) %>%
+    summarise(
+        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
+    ) %>%
+    mutate(
+        Cume_a = cumprod(1 + Ret_a) - 1,
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
+        Date = as.Date(Date)
+    )
+
+## plotting all strats
+
+non_smoothed_long_i1 <- alpha_portfolios_i1 %>%
+    mutate(Source = "Non-smoothed") %>%
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
+
+ewma_long_i1 <- a_ewma_portfolios_i1 %>%
+    mutate(Source = "EWMA") %>%
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
+
+sma_long_i1 <- a_sma_portfolios_i1 %>%
+    mutate(Source = "SMA") %>%
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
+
+
+# Combine all into one data frame
+combined_cume_i1 <- bind_rows(non_smoothed_long_i1, ewma_long_i1, sma_long_i1) %>%
+    pivot_longer(cols = c(Cume_a, Cume_d, Cume_r), names_to = "Strategy", values_to = "CumulativeReturn") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "Cume_a" ~ "Alpha-based",
+            Strategy == "Cume_d" ~ "Delta-based",
+            Strategy == "Cume_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    )
+
+
+# Plot
+ggplot(combined_cume_i1, aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Source)) +
+    geom_line() +
+    theme_minimal() +
+    labs(x = "Date", 
+         y = "Cumulative Return") +
+    theme(legend.position = "bottom", legend.title = element_blank(), legend.spacing.x = unit(2, "cm"))
+    ggsave("allRegionsAllStratsi1.png",
+           path = "plots/")
+
+#### ------- Geographical Strategies ----------------------------
+
+wide_non_smooth_i1 <- alpha_weights_i1 %>%
+    dplyr::select(Date, Currency, Alpha) %>%
+    pivot_wider(names_from = Currency, values_from = Alpha)
+
+WEST_EWMA_i1 <- compute_strategy(wide_smooth_ewma_i1, 
+                                 returns_long, 
+                                 suffix = "_EWMA", 
+                                 cols = west)
+WEST_SMA_i1 <- compute_strategy(wide_smooth_sma_i1, 
+                                returns_long, 
+                                suffix = "_SMA", 
+                                cols = west)
+WEST_NS_i1 <- compute_strategy(wide_non_smooth_i1, 
+                               returns_long,
+                               cols = west)
+
+ASIA_EWMA_i1 <- compute_strategy(wide_smooth_ewma_i1, 
+                                 returns_long, 
+                                 suffix = "_EWMA", 
+                                 cols = east)
+ASIA_SMA_i1 <- compute_strategy(wide_smooth_sma_i1, 
+                                returns_long, 
+                                suffix = "_SMA", 
+                                cols = east)
+ASIA_NS_i1 <- compute_strategy(wide_non_smooth_i1, 
+                               returns_long,
+                               cols = east)
+G7_EWMA_i1 <- compute_strategy(wide_smooth_ewma_i1, 
+                               returns_long, 
+                               suffix = "_EWMA", 
+                               cols = g7)
+G7_SMA_i1 <- compute_strategy(wide_smooth_sma_i1, 
+                              returns_long, 
+                              suffix = "_SMA", 
+                              cols = g7)
+G7_NS_i1 <- compute_strategy(wide_non_smooth_i1, 
+                             returns_long,
+                             cols = g7)
+
+### combining returns
+
+strat_dfs_i1 <- list(
+    G7_NS_i1 = G7_NS_i1,
+    G7_SMA_i1 = G7_SMA_i1,
+    G7_EWMA_i1 = G7_EWMA_i1,
+    ASIA_NS_i1 = ASIA_NS_i1,
+    ASIA_SMA_i1 = ASIA_SMA_i1,
+    ASIA_EWMA_i1 = ASIA_EWMA_i1,
+    WEST_NS_i1 = WEST_NS_i1,
+    WEST_SMA_i1 = WEST_SMA_i1,
+    WEST_EWMA_i1 = WEST_EWMA_i1
+)
+
+combined_geo_strats_i1 <- bind_rows(strat_dfs_i1, .id = "Source") %>%
+    pivot_longer(cols = c(Cume_a, Cume_d, Cume_r), names_to = "Strategy", values_to = "CumulativeReturn") %>%
+    separate(Source, into = c("Region", "Smoothing"), sep = "_", extra = "merge") %>%
+    mutate(
+        Smoothing = case_when(
+            Smoothing == "NS_i1" ~ "Non-Smoothed",
+            Smoothing == "EWMA_i1" ~ "EWMA",
+            Smoothing == "SMA_i1" ~ "SMA",
+            TRUE ~ Smoothing
+        )
+    ) %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "Cume_a" ~ "Alpha-based",
+            Strategy == "Cume_d" ~ "Delta-based",
+            Strategy == "Cume_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    )
+
+combined_geo_strats_i1 %>%
+    filter(Region == "G7") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom") 
+ggsave(file = "G7I1.png",
+       path = "plots/")
+
+combined_geo_strats_i1 %>%
+    filter(Region == "ASIA") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+ggsave(file = "ASIAI1.png",
+       path = "plots/")
+
+combined_geo_strats_i1 %>%
+    filter(Region == "WEST") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+ggsave(file = "WESTI1.png",
+       path = "plots/")
+
+## performance metrics
+
+wide_perf_i1 <- bind_rows(strat_dfs_i1, .id = "Source") %>%
+    pivot_longer(cols = c(Ret_a, Ret_d, Ret_r), names_to = "Type", values_to = "Return") %>%
+    mutate(Strategy = paste(Source, Type, sep = "_")) %>%
+    select(Date, Strategy, Return) %>%
+    pivot_wider(names_from = Strategy, values_from = Return) %>%
+    arrange(Date)
+
+ret_xts_i1 <- xts(wide_perf_i1[,-1], order.by = wide_perf_i1$Date)
+
+alphaScreen_i1 <- alphaScreening(X = ret_xts_i1)
+
+Sharpe_i1 <- sharpe(wide_perf_i1[,-1])
+mSharpe_i1 <- msharpe(wide_perf_i1[,-1])
+
+
+## plotting weights
+alpha_sma_long_i1 %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    theme_minimal() +
+    labs( y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
+ggsave(file = "WeightsSMAI1.png",
+       path = "plots/")
+
+alpha_ewma_long_i1 %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    theme_minimal() +
+    labs(y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
+ggsave(file = "WeightsEWMAI1.png",
+       path = "plots/")
+
+alpha_weights_i1 %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    theme_minimal() +
+    labs(y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
+ggsave(file = "WeightsNSI1.png",
+       path = "plots/")
+
+## --- Portfolio Allocation: Instrument 2 (constant + 2 lagged Errors) ---------
+### -------- Creating Weights ----
+alpha_long_i2 <- as.data.frame(alpha_matrix_i2) %>%
+    rownames_to_column("Date") %>%
+    pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
+    mutate(Date = as.Date(Date, format = "%Y-%m-%d"),
+           Alpha = as.numeric(Alpha),
+           Deviation = abs(Alpha - 0.5),                    
+           Direction = ifelse(Alpha < 0.5, "Long", "Short"),
+           Delta = Alpha - dplyr::lag(Alpha)
+    )
+
+alpha_weights_i2 <- alpha_long_i2 %>%
+    group_by(Date) %>%
+    mutate(
+        dev   = abs(Alpha - 0.5),
+        dir   = if_else(Alpha >  0.5, -1, +1),
+        raw_a = dir * dev
+    ) %>%
+    group_by(Date) %>%
+    mutate(
+        w_a   = raw_a / sum(abs(raw_a), na.rm = TRUE),
+        n_pos = sum(Delta >  0, na.rm = TRUE),
+        n_neg = sum(Delta <  0, na.rm = TRUE),
+        w_d   = case_when(
+            Delta >  0 ~  -1/n_pos,
+            Delta <  0 ~  +1/n_neg,
+            TRUE       ~   0
+        )
+    ) %>%
+    ungroup() %>%
+    group_by(Date) %>%
+    arrange(Date, Alpha) %>%
+    mutate(
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n/2) ~ +1/floor(n/2),
+            rank > floor(n/2) ~ -1/ceiling(n/2),
+            T ~ 0
+        )
+    ) %>%
+    ungroup()
+
+wide_smooth_ewma_i2 <- alpha_ewma_i2 %>%  
+    arrange(Date) %>%
+    mutate(
+        across(
+            .cols = -Date,
+            .fns  = ~ EMA(.x, n = 10),
+            .names = "{.col}_EWMA"
+        )
+    ) %>%
+    group_by() %>% # if you ever have multiple symbols, do group_by(symbol)
+    mutate(
+        across(
+            .cols = ends_with("_EWMA"),
+            .fns  = ~ .x - lag(.x),
+            .names = "{.col}.d"
+        )
+    ) %>%
+    ungroup()
+
+wide_smooth_sma_i2 <- alpha_sma_i2 %>%     # or whatever your SMA table is
+    arrange(Date) %>%
+    # 1a) compute a 10‐month EWMA of *each* currency's alpha
+    mutate(
+        across(
+            .cols = -Date,
+            .fns  = ~ SMA(.x, n = 10),
+            .names = "{.col}_SMA"
+        )
+    ) %>%
+    group_by() %>% 
+    mutate(
+        across(
+            .cols = ends_with("_SMA"),
+            .fns  = ~ .x - lag(.x),
+            .names = "{.col}.d"
+        )
+    ) %>%
+    ungroup()
+
+alpha_ewma_long_i2 <- wide_smooth_ewma_i2 %>%
+    pivot_longer(
+        cols      = ends_with("_EWMA"),
+        names_to  = "Currency",
+        values_to = "Alpha"
+    ) %>%
+    mutate(
+        Currency = sub("_EWMA$", "", Currency)
+    ) %>% 
+    group_by(Currency) %>% 
+    arrange(Date) %>% 
+    mutate(
+        Delta = Alpha - lag(Alpha)
+    ) %>% 
+    ungroup() %>% 
+    mutate(
+        dev   = abs(Alpha - 0.5),
+        dir   = if_else(Alpha >  0.5, -1, +1),
+        raw_a = dir * dev
+    ) %>%
+    group_by(Date) %>%
+    mutate(
+        w_a   = raw_a / sum(abs(raw_a), na.rm = TRUE),
+        n_pos = sum(Delta >  0, na.rm = TRUE),
+        n_neg = sum(Delta <  0, na.rm = TRUE),
+        w_d   = case_when(
+            Delta >  0 ~  -1/n_pos,
+            Delta <  0 ~  +1/n_neg,
+            TRUE       ~   0
+        )
+    ) %>%
+    ungroup() %>%
+    group_by(Date) %>%
+    arrange(Date, Alpha) %>%
+    mutate(
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n/2) ~ +1/floor(n/2),
+            rank > floor(n/2) ~ -1/ceiling(n/2),
+            T ~ 0
+        )
+    ) %>%
+    ungroup()
+
+alpha_sma_long_i2 <- wide_smooth_sma_i2 %>%
+    pivot_longer(
+        cols      = ends_with("_SMA"),
+        names_to  = "Currency",
+        values_to = "Alpha"
+    ) %>%
+    mutate(
+        Currency = sub("_SMA$", "", Currency)
+    ) %>% 
+    group_by(Currency) %>% 
+    arrange(Date) %>% 
+    mutate(
+        Delta = Alpha - lag(Alpha)
+    ) %>% 
+    ungroup() %>% 
+    mutate(
+        dev   = abs(Alpha - 0.5),
+        dir   = if_else(Alpha >  0.5, -1, +1),
+        raw_a = dir * dev
+    ) %>%
+    group_by(Date) %>%
+    mutate(
+        w_a   = raw_a / sum(abs(raw_a), na.rm = TRUE),
+        n_pos = sum(Delta >  0, na.rm = TRUE),
+        n_neg = sum(Delta <  0, na.rm = TRUE),
+        w_d   = case_when(
+            Delta >  0 ~  -1/n_pos,
+            Delta <  0 ~  +1/n_neg,
+            TRUE       ~   0
+        )
+    ) %>%
+    ungroup() %>%
+    group_by(Date) %>%
+    arrange(Date, Alpha) %>%
+    mutate(
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n/2) ~ +1/floor(n/2),
+            rank > floor(n/2) ~ -1/ceiling(n/2),
+            T ~ 0
+        )
+    ) %>%
+    ungroup()
+
+
+alpha_weights_filtered_i2 <- alpha_weights_i2 %>% filter(Date >= common_start)
+
+### -------- Calculating Returns of simple strats ----
+
+alpha_portfolios_i2 <- alpha_weights_filtered_i2 %>%
+    left_join(returns_long, by = c("Date", "Currency")) %>%
+    group_by(Date) %>%
+    summarise(
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
+        .groups = "drop"
+    ) %>%
+    mutate(
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_a = cumprod(1 + Ret_a) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
+        Date = as.Date(Date)
+    )
+
+
+## plotting simple strat - non-smoothed
+ggplot(alpha_portfolios_i2, aes(x = Date, y = Cume_a)) +
+    geom_line() +
+    labs(title = "Cumulative Returns of Alpha-Based Portfolio",
+         x = "Date",
+         y = "Cumulative Return") +
+    theme_minimal() +
+    theme(legend.position = "bottom") +
+    scale_colour_viridis_d(option = "D") 
+
+
+### smoothed data
+
+a_ewma_portfolios_i2 <- alpha_ewma_long_i2 %>% filter(Date >= common_start) %>%
+    left_join(returns_long, by = c("Date","Currency")) %>%
+    group_by(Date) %>%
+    summarise(
+        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
+    ) %>%
+    mutate(
+        Cume_a = cumprod(1 + Ret_a) - 1,
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
+        Date = as.Date(Date)
+    ) 
+
+a_sma_portfolios_i2 <- alpha_sma_long_i2 %>% filter(Date >= common_start)%>%
+    left_join(returns_long, by = c("Date","Currency")) %>%
+    group_by(Date) %>%
+    summarise(
+        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
+    ) %>%
+    mutate(
+        Cume_a = cumprod(1 + Ret_a) - 1,
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
+        Date = as.Date(Date)
+    )
+
+## plotting all strats
+
+non_smoothed_long_i2 <- alpha_portfolios_i2 %>%
+    mutate(Source = "Non-smoothed") %>%
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
+
+ewma_long_i2 <- a_ewma_portfolios_i2 %>%
+    mutate(Source = "EWMA") %>%
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
+
+sma_long_i2 <- a_sma_portfolios_i2 %>%
+    mutate(Source = "SMA") %>%
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
+
+
+# Combine all into one data frame
+combined_cume_i2 <- bind_rows(non_smoothed_long_i2, ewma_long_i2, sma_long_i2) %>%
+    pivot_longer(cols = c(Cume_a, Cume_d, Cume_r), names_to = "Strategy", values_to = "CumulativeReturn") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "Cume_a" ~ "Alpha-based",
+            Strategy == "Cume_d" ~ "Delta-based",
+            Strategy == "Cume_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    )
+
+
+# Plot
+ggplot(combined_cume_i2, aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Source)) +
+    geom_line() +
+    theme_minimal() +
+    labs(x = "Date", 
+         y = "Cumulative Return") +
+    theme(legend.position = "bottom", legend.title = element_blank(), legend.spacing.x = unit(2, "cm"))
+    ggsave("allRegionsAllStratsi2.png",
+           path = "plots/")
+
+#### ------- Geographical Strategies ----------------------------
+
+wide_non_smooth_i2 <- alpha_weights_i2 %>%
+    dplyr::select(Date, Currency, Alpha) %>%
+    pivot_wider(names_from = Currency, values_from = Alpha)
+
+WEST_EWMA_i2 <- compute_strategy(wide_smooth_ewma_i2, 
+                                 returns_long, 
+                                 suffix = "_EWMA", 
+                                 cols = west)
+WEST_SMA_i2 <- compute_strategy(wide_smooth_sma_i2, 
+                                returns_long, 
+                                suffix = "_SMA", 
+                                cols = west)
+WEST_NS_i2 <- compute_strategy(wide_non_smooth_i2, 
+                               returns_long,
+                               cols = west)
+
+ASIA_EWMA_i2 <- compute_strategy(wide_smooth_ewma_i2, 
+                                 returns_long, 
+                                 suffix = "_EWMA", 
+                                 cols = east)
+ASIA_SMA_i2 <- compute_strategy(wide_smooth_sma_i2, 
+                                returns_long, 
+                                suffix = "_SMA", 
+                                cols = east)
+ASIA_NS_i2 <- compute_strategy(wide_non_smooth_i2, 
+                               returns_long,
+                               cols = east)
+G7_EWMA_i2 <- compute_strategy(wide_smooth_ewma_i2, 
+                               returns_long, 
+                               suffix = "_EWMA", 
+                               cols = g7)
+G7_SMA_i2 <- compute_strategy(wide_smooth_sma_i2, 
+                              returns_long, 
+                              suffix = "_SMA", 
+                              cols = g7)
+G7_NS_i2 <- compute_strategy(wide_non_smooth_i2, 
+                             returns_long,
+                             cols = g7)
+
+### combining returns
+
+strat_dfs_i2 <- list(
+    G7_NS_i2 = G7_NS_i2,
+    G7_SMA_i2 = G7_SMA_i2,
+    G7_EWMA_i2 = G7_EWMA_i2,
+    ASIA_NS_i2 = ASIA_NS_i2,
+    ASIA_SMA_i2 = ASIA_SMA_i2,
+    ASIA_EWMA_i2 = ASIA_EWMA_i2,
+    WEST_NS_i2 = WEST_NS_i2,
+    WEST_SMA_i2 = WEST_SMA_i2,
+    WEST_EWMA_i2 = WEST_EWMA_i2
+)
+
+combined_geo_strats_i2 <- bind_rows(strat_dfs_i2, .id = "Source") %>%
+    pivot_longer(cols = c(Cume_a, Cume_d, Cume_r), names_to = "Strategy", values_to = "CumulativeReturn") %>%
+    separate(Source, into = c("Region", "Smoothing"), sep = "_", extra = "merge") %>%
+    mutate(
+        Smoothing = case_when(
+            Smoothing == "NS_i2" ~ "Non-Smoothed",
+            Smoothing == "EWMA_i2" ~ "EWMA",
+            Smoothing == "SMA_i2" ~ "SMA",
+            TRUE ~ Smoothing
+        )
+    ) %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "Cume_a" ~ "Alpha Based",
+            Strategy == "Cume_d" ~ "Delta-Based",
+            Strategy == "Cume_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    )
+
+combined_geo_strats_i2 %>%
+    filter(Region == "G7") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+ggsave(file = "G7I2.png",
+       path = "plots/")
+
+combined_geo_strats_i2 %>%
+    filter(Region == "ASIA") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+ggsave(file = "ASIAI2.png",
+       path = "plots/")
+
+combined_geo_strats_i2 %>%
+    filter(Region == "WEST") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+ggsave(file = "WESTI2.png",
+       path = "plots/")
+
+
+## performance metrics
+
+wide_perf_i2 <- bind_rows(strat_dfs_i2, .id = "Source") %>%
+    pivot_longer(cols = c(Ret_a, Ret_d, Ret_r), names_to = "Type", values_to = "Return") %>%
+    mutate(Strategy = paste(Source, Type, sep = "_")) %>%
+    select(Date, Strategy, Return) %>%
+    pivot_wider(names_from = Strategy, values_from = Return) %>%
+    arrange(Date)
+
+ret_xts_i2 <- xts(wide_perf_i2[,-1], order.by = wide_perf_i2$Date)
+
+alphaScreening(X = ret_xts_i2)
+
+sharpe(wide_perf_i2[,-1])
+msharpe(wide_perf_i2[,-1])
+
+
+## plotting weights
+
+alpha_ewma_long_i2 %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    theme_minimal() +
+    labs(y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
+ggsave(file = "WeightsEWMAI2.png",
+       path = "plots/")
+
+alpha_sma_long_i2 %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    theme_minimal() +
+    labs(y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
+ggsave(file = "WeightsSMAI2.png",
+       path = "plots/")
+
+alpha_weights_i2 %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    theme_minimal() +
+    labs(y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
+ggsave(file = "WeightsNSI2.png",
+       path = "plots/")
+
+
+## ---- Portfolio Allocation: Instrument 3 (constant + Absolute Lagged Errors) ----
+
+### -------- Creating Weights ----
+alpha_long_i3 <- as.data.frame(alpha_matrix_i3) %>%
+    rownames_to_column("Date") %>%
+    pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
+    mutate(Date = as.Date(Date, format = "%Y-%m-%d"),
+           Alpha = as.numeric(Alpha),
+           Deviation = abs(Alpha - 0.5),                    
+           Direction = ifelse(Alpha < 0.5, "Long", "Short"),
+           Delta = Alpha - dplyr::lag(Alpha)
+    )
+
+alpha_weights_i3 <- alpha_long_i3 %>%
+    group_by(Date) %>%
+    mutate(
+        dev   = abs(Alpha - 0.5),
+        dir   = if_else(Alpha >  0.5, -1, +1),
+        raw_a = dir * dev
+    ) %>%
+    group_by(Date) %>%
+    mutate(
+        w_a   = raw_a / sum(abs(raw_a), na.rm = TRUE),
+        n_pos = sum(Delta >  0, na.rm = TRUE),
+        n_neg = sum(Delta <  0, na.rm = TRUE),
+        w_d   = case_when(
+            Delta >  0 ~  -1/n_pos,
+            Delta <  0 ~  +1/n_neg,
+            TRUE       ~   0
+        )
+    ) %>%
+    ungroup() %>%
+    group_by(Date) %>%
+    arrange(Date, Alpha) %>%
+    mutate(
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n/2) ~ +1/floor(n/2),
+            rank > floor(n/2) ~ -1/ceiling(n/2),
+            T ~ 0
+        )
+    ) %>%
+    ungroup()
+
+wide_smooth_ewma_i3 <- alpha_ewma_i3 %>%  
+    arrange(Date) %>%
+    mutate(
+        across(
+            .cols = -Date,
+            .fns  = ~ EMA(.x, n = 10),
+            .names = "{.col}_EWMA"
+        )
+    ) %>%
+    group_by() %>% # if you ever have multiple symbols, do group_by(symbol)
+    mutate(
+        across(
+            .cols = ends_with("_EWMA"),
+            .fns  = ~ .x - lag(.x),
+            .names = "{.col}.d"
+        )
+    ) %>%
+    ungroup()
+
+wide_smooth_sma_i3 <- alpha_sma_i3 %>%     # or whatever your SMA table is
+    arrange(Date) %>%
+    # 1a) compute a 10‐month EWMA of *each* currency's alpha
+    mutate(
+        across(
+            .cols = -Date,
+            .fns  = ~ SMA(.x, n = 10),
+            .names = "{.col}_SMA"
+        )
+    ) %>%
+    group_by() %>% 
+    mutate(
+        across(
+            .cols = ends_with("_SMA"),
+            .fns  = ~ .x - lag(.x),
+            .names = "{.col}.d"
+        )
+    ) %>%
+    ungroup()
+
+alpha_ewma_long_i3 <- wide_smooth_ewma_i3 %>%
+    pivot_longer(
+        cols      = ends_with("_EWMA"),
+        names_to  = "Currency",
+        values_to = "Alpha"
+    ) %>%
+    mutate(
+        Currency = sub("_EWMA$", "", Currency)
+    ) %>% 
+    group_by(Currency) %>% 
+    arrange(Date) %>% 
+    mutate(
+        Delta = Alpha - lag(Alpha)
+    ) %>% 
+    ungroup() %>% 
+    mutate(
+        dev   = abs(Alpha - 0.5),
+        dir   = if_else(Alpha >  0.5, -1, +1),
+        raw_a = dir * dev
+    ) %>%
+    group_by(Date) %>%
+    mutate(
+        w_a   = raw_a / sum(abs(raw_a), na.rm = TRUE),
+        n_pos = sum(Delta >  0, na.rm = TRUE),
+        n_neg = sum(Delta <  0, na.rm = TRUE),
+        w_d   = case_when(
+            Delta >  0 ~  -1/n_pos,
+            Delta <  0 ~  +1/n_neg,
+            TRUE       ~   0
+        )
+    ) %>%
+    ungroup() %>%
+    group_by(Date) %>%
+    arrange(Date, Alpha) %>%
+    mutate(
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n/2) ~ +1/floor(n/2),
+            rank > floor(n/2) ~ -1/ceiling(n/2),
+            T ~ 0
+        )
+    ) %>%
+    ungroup()
+
+alpha_sma_long_i3 <- wide_smooth_sma_i3 %>%
+    pivot_longer(
+        cols      = ends_with("_SMA"),
+        names_to  = "Currency",
+        values_to = "Alpha"
+    ) %>%
+    mutate(
+        Currency = sub("_SMA$", "", Currency)
+    ) %>% 
+    group_by(Currency) %>% 
+    arrange(Date) %>% 
+    mutate(
+        Delta = Alpha - lag(Alpha)
+    ) %>% 
+    ungroup() %>% 
+    mutate(
+        dev   = abs(Alpha - 0.5),
+        dir   = if_else(Alpha >  0.5, -1, +1),
+        raw_a = dir * dev
+    ) %>%
+    group_by(Date) %>%
+    mutate(
+        w_a   = raw_a / sum(abs(raw_a), na.rm = TRUE),
+        n_pos = sum(Delta >  0, na.rm = TRUE),
+        n_neg = sum(Delta <  0, na.rm = TRUE),
+        w_d   = case_when(
+            Delta >  0 ~  -1/n_pos,
+            Delta <  0 ~  +1/n_neg,
+            TRUE       ~   0
+        )
+    ) %>%
+    ungroup() %>%
+    group_by(Date) %>%
+    arrange(Date, Alpha) %>%
+    mutate(
+        rank = row_number(),
+        n = n(),
+        w_r = case_when(
+            rank <= floor(n/2) ~ +1/floor(n/2),
+            rank > floor(n/2) ~ -1/ceiling(n/2),
+            T ~ 0
+        )
+    ) %>%
+    ungroup()
+
+
+alpha_weights_filtered_i3 <- alpha_weights_i3 %>% filter(Date >= common_start)
+
+### -------- Calculating Returns of simple strats ----
+
+alpha_portfolios_i3 <- alpha_weights_filtered_i3 %>%
+    left_join(returns_long, by = c("Date", "Currency")) %>%
+    group_by(Date) %>%
+    summarise(
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
+        .groups = "drop"
+    ) %>%
+    mutate(
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_a = cumprod(1 + Ret_a) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
+        Date = as.Date(Date)
+    )
+
+
+## plotting simple strat - non-smoothed
+ggplot(alpha_portfolios_i3, aes(x = Date, y = Cume_a)) +
+    geom_line() +
+    labs(title = "Cumulative Returns of Alpha-Based Portfolio",
+         x = "Date",
+         y = "Cumulative Return") +
+    theme_minimal() +
+    theme(legend.position = "bottom") +
+    scale_colour_viridis_d(option = "D") 
+
+
+### smoothed data
+
+a_ewma_portfolios_i3 <- alpha_ewma_long_i3 %>% filter(Date >= common_start) %>%
+    left_join(returns_long, by = c("Date","Currency")) %>%
+    group_by(Date) %>%
+    summarise(
+        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
+    ) %>%
+    mutate(
+        Cume_a = cumprod(1 + Ret_a) - 1,
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
+        Date = as.Date(Date)
+    ) 
+
+a_sma_portfolios_i3 <- alpha_sma_long_i3 %>% filter(Date >= common_start)%>%
+    left_join(returns_long, by = c("Date","Currency")) %>%
+    group_by(Date) %>%
+    summarise(
+        Ret_a = sum(w_a * ExcessReturn, na.rm = TRUE),
+        Ret_d = sum(w_d * ExcessReturn, na.rm = TRUE),
+        Ret_r = sum(w_r * ExcessReturn, na.rm = TRUE),
+    ) %>%
+    mutate(
+        Cume_a = cumprod(1 + Ret_a) - 1,
+        Cume_d = cumprod(1 + Ret_d) - 1,
+        Cume_r = cumprod(1 + Ret_r) - 1,
+        Date = as.Date(Date)
+    )
+
+## plotting all strats
+
+non_smoothed_long_i3 <- alpha_portfolios_i3 %>%
+    mutate(Source = "Non-smoothed") %>%
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
+
+ewma_long_i3 <- a_ewma_portfolios_i3 %>%
+    mutate(Source = "EWMA") %>%
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
+
+sma_long_i3 <- a_sma_portfolios_i3 %>%
+    mutate(Source = "SMA") %>%
+    dplyr::select(Date, Cume_a, Cume_d, Cume_r, Source)
+
+
+# Combine all into one data frame
+combined_cume_i3 <- bind_rows(non_smoothed_long_i3, ewma_long_i3, sma_long_i3) %>%
+    pivot_longer(cols = c(Cume_a, Cume_d, Cume_r), names_to = "Strategy", values_to = "CumulativeReturn") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "Cume_a" ~ "Alpha-based",
+            Strategy == "Cume_d" ~ "Delta-based",
+            Strategy == "Cume_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    )
+
+
+# Plot
+ggplot(combined_cume_i3, aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Source)) +
+    geom_line() +
+    theme_minimal() +
+    labs(x = "Date", 
+         y = "Cumulative Return") +
+    #scale_color_viridis_d(option = "E") +
+    theme(legend.position = "bottom", legend.title = element_blank(), legend.spacing.x = unit(2, "cm"))
+    ggsave("allRegionsAllStratsi3.png",
+           path = "plots/")
+
+#### ------- Geographical Strategies ----------------------------
+
+wide_non_smooth_i3 <- alpha_weights_i3 %>%
+    dplyr::select(Date, Currency, Alpha) %>%
+    pivot_wider(names_from = Currency, values_from = Alpha)
+
+WEST_EWMA_i3 <- compute_strategy(wide_smooth_ewma_i3, 
+                                 returns_long, 
+                                 suffix = "_EWMA", 
+                                 cols = west)
+WEST_SMA_i3 <- compute_strategy(wide_smooth_sma_i3, 
+                                returns_long, 
+                                suffix = "_SMA", 
+                                cols = west)
+WEST_NS_i3 <- compute_strategy(wide_non_smooth_i3, 
+                               returns_long,
+                               cols = west)
+
+ASIA_EWMA_i3 <- compute_strategy(wide_smooth_ewma_i3, 
+                                 returns_long, 
+                                 suffix = "_EWMA", 
+                                 cols = east)
+ASIA_SMA_i3 <- compute_strategy(wide_smooth_sma_i3, 
+                                returns_long, 
+                                suffix = "_SMA", 
+                                cols = east)
+ASIA_NS_i3 <- compute_strategy(wide_non_smooth_i3, 
+                               returns_long,
+                               cols = east)
+G7_EWMA_i3 <- compute_strategy(wide_smooth_ewma_i3, 
+                               returns_long, 
+                               suffix = "_EWMA", 
+                               cols = g7)
+G7_SMA_i3 <- compute_strategy(wide_smooth_sma_i3, 
+                              returns_long, 
+                              suffix = "_SMA", 
+                              cols = g7)
+G7_NS_i3 <- compute_strategy(wide_non_smooth_i3, 
+                             returns_long,
+                             cols = g7)
+
+### combining returns
+
+strat_dfs_i3 <- list(
+    G7_NS_i3 = G7_NS_i3,
+    G7_SMA_i3 = G7_SMA_i3,
+    G7_EWMA_i3 = G7_EWMA_i3,
+    ASIA_NS_i3 = ASIA_NS_i3,
+    ASIA_SMA_i3 = ASIA_SMA_i3,
+    ASIA_EWMA_i3 = ASIA_EWMA_i3,
+    WEST_NS_i3 = WEST_NS_i3,
+    WEST_SMA_i3 = WEST_SMA_i3,
+    WEST_EWMA_i3 = WEST_EWMA_i3
+)
+
+combined_geo_strats_i3 <- bind_rows(strat_dfs_i3, .id = "Source") %>%
+    pivot_longer(cols = c(Cume_a, Cume_d, Cume_r), names_to = "Strategy", values_to = "CumulativeReturn") %>%
+    separate(Source, into = c("Region", "Smoothing"), sep = "_", extra = "merge") %>%
+    mutate(
+        Smoothing = case_when(
+            Smoothing == "NS_i3" ~ "Non-Smoothed",
+            Smoothing == "EWMA_i3" ~ "EWMA",
+            Smoothing == "SMA_i3" ~ "SMA",
+            TRUE ~ Smoothing
+        )
+    ) %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "Cume_a" ~ "Alpha-based",
+            Strategy == "Cume_d" ~ "Delta-based",
+            Strategy == "Cume_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    )
+
+combined_geo_strats_i3 %>%
+    filter(Region == "G7") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+ggsave(file = "G7I3.png",
+       path = "plots/")
+
+combined_geo_strats_i3 %>%
+    filter(Region == "ASIA") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+ggsave(file = "ASIAI3.png",
+       path = "plots/")
+
+combined_geo_strats_i3 %>%
+    filter(Region == "WEST") %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Smoothing)) +
+    geom_line() +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+ggsave(file = "WESTI3.png",
+       path = "plots/")
+
+
+## performance metrics
+
+wide_perf_i3 <- bind_rows(strat_dfs_i3, .id = "Source") %>%
+    pivot_longer(cols = c(Ret_a, Ret_d, Ret_r), names_to = "Type", values_to = "Return") %>%
+    mutate(Strategy = paste(Source, Type, sep = "_")) %>%
+    select(Date, Strategy, Return) %>%
+    pivot_wider(names_from = Strategy, values_from = Return) %>%
+    arrange(Date)
+
+ret_xts_i3 <- xts(wide_perf_i3[,-1], order.by = wide_perf_i3$Date)
+
+alphaScreening(X = ret_xts_i3)
+
+sharpe(wide_perf_i3[,-1])
+msharpe(wide_perf_i3[,-1])
+
+
+## plotting weights
+
+alpha_ewma_long_i3 %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    theme_minimal() +
+    labs(y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
+ggsave(file = "WeightsEWMAI3.png",
+       path = "plots/")
+
+alpha_sma_long_i3 %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    theme_minimal() +
+    labs(y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
+ggsave(file = "WeightsSMAI3.png",
+       path = "plots/")
+
+alpha_weights_i3 %>%
+    pivot_longer(cols = c(w_a, w_d, w_r), names_to = "Strategy", values_to = "Weight") %>%
+    mutate(
+        Strategy = case_when(
+            Strategy == "w_a" ~ "Alpha-based",
+            Strategy == "w_d" ~ "Delta-based",
+            Strategy == "w_r" ~ "Ranked Alphas",
+            TRUE ~ Strategy
+        )
+    ) %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    theme_minimal() +
+    labs(y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
+ggsave(file = "WeightsNSI3.png",
+       path = "plots/")
