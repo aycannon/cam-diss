@@ -221,15 +221,18 @@ lm_daily_df <- lm_daily_df %>%
 
 print(lm_daily_df)
 
-ggplot(lm_daily_df[1:nrow(lm_daily_df)-1,], aes(x = Currency, y = Slope)) +
+ggplot(lm_daily_df[1:nrow(lm_daily_df)-1,], aes(x = Currency, y = Slope, color = Currency)) +
     geom_point() +
-    geom_hline(yintercept = 1, linetype = "dashed", color = "red") +
+    geom_hline(yintercept = 1, linetype = "dashed", color = "grey") +
     geom_errorbar(aes(ymin = Slope - 1.96 * SE.Slope,
                       ymax = Slope + 1.96 * SE.Slope),
                   width = 0.1) +
     labs(x = "Currency", 
          y = "Slope Coefficient") +
     theme_minimal()
+
+ggsave( file = "betaCoefficients.png",
+        path = "plots/")
 
 
 ###------------------------------ GMM Alpha Estimation---------------------------
@@ -339,7 +342,7 @@ smooth_alpha_i3 <- as.data.frame(alpha_matrix_i3) %>%
     mutate(Date = as.Date(Date))
 alpha_ewma_i3 <- smooth_alpha_i3 %>%
     mutate(across(-Date, ~ EMA(., n = 10)))
-alpha_sma_i3 <- smooth_alpha_i1 %>%
+alpha_sma_i3 <- smooth_alpha_i3 %>%
     mutate(across(-Date, ~ rollmean(., k = 10, fill = NA, align = "right")))
 
 
@@ -774,7 +777,7 @@ combined_cume <- bind_rows(non_smoothed_long, ewma_long, sma_long) %>%
 
 
 # Plot
-ggplot(combined_cume, aes(x = Date, y = CumulativeReturn, color = Source, linetype = Strategy)) +
+ggplot(combined_cume, aes(x = Date, y = CumulativeReturn, color = Strategy, linetype = Source)) +
     geom_line() +
     theme_minimal() +
     labs(x = "Date", 
