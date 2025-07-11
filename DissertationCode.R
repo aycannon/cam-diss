@@ -236,7 +236,7 @@ ggplot(lm_daily_df[1:nrow(lm_daily_df)-1,], aes(x = Currency, y = Slope)) +
 
 plan(multisession, workers = parallel::detectCores() - 1)
 
-roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2) {
+roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2, Inst = 0) {
     n <- nrow(data)
     date_seq <- data$YM[(window + 1):n]
     inv_logit <- function(x) 1 / (1 + exp(-x))
@@ -258,15 +258,17 @@ roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2) {
                 transmute(
                     forecast_error = .data[[e_col]] - .data[[f_col]],
                     lag_error = lag(.data[[e_col]] - .data[[f_col]]),
+                    lag2_error = lag(lag(.data[[e_col]] - .data[[f_col]])),
+                    ALE = abs(lag(.data[[e_col]] - .data[[f_col]])),
                     const = 1
                 ) %>% na.omit()
             
             
             if (nrow(dat_cur) > 10) {
-                gmm_moments <- function(theta, data) {
+                gmm_moments <- function(theta, data, Inst) {
                     alpha <- theta[1]
                     e <- data$forecast_error
-                    z <- matrix(1, nrow = length(e), ncol = 1) #z <- as.matrix(data[, c("const", "lag_error")])
+                    z <- as.matrix(data[, c("const", "ALE")])
                     lambda <- (e < 0) - alpha
                     g <- z * lambda * abs(e)^(p - 1)
                     return(g)
@@ -293,11 +295,18 @@ roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2) {
     return(alpha_matrix)
 }
 
-alpha_matrix <- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p)
+alpha_matrix <- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 0)
+alpha_matrix_i1<- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 1)
+alpha_matrix_i2<- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 2)
+alpha_matrix_i3<- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 3)
 
 ## we want to remove Vietnamese Dong as there are so many NAs
 
 alpha_matrix <- alpha_matrix[,1:ncol(alpha_matrix)-1]
+alpha_matrix_i1 <- alpha_matrix_i1[,1:ncol(alpha_matrix_i1)-1]
+alpha_matrix_i2 <- alpha_matrix_i2[,1:ncol(alpha_matrix_i2)-1]
+alpha_matrix_i3 <- alpha_matrix_i3[,1:ncol(alpha_matrix_i3)-1]
+
 ## Plotting the alphas
 
 smooth_alpha <- as.data.frame(alpha_matrix) %>%
@@ -307,6 +316,30 @@ smooth_alpha <- as.data.frame(alpha_matrix) %>%
 alpha_ewma <- smooth_alpha %>%
     mutate(across(-Date, ~ EMA(., n = 10)))
 alpha_sma <- smooth_alpha %>%
+    mutate(across(-Date, ~ rollmean(., k = 10, fill = NA, align = "right")))
+
+smooth_alpha_i1 <- as.data.frame(alpha_matrix_i1) %>%
+    rownames_to_column("Date") %>%
+    mutate(Date = as.Date(Date))
+alpha_ewma_i1 <- smooth_alpha_i1 %>%
+    mutate(across(-Date, ~ EMA(., n = 10)))
+alpha_sma_i1 <- smooth_alpha_i1 %>%
+    mutate(across(-Date, ~ rollmean(., k = 10, fill = NA, align = "right")))
+
+smooth_alpha_i2 <- as.data.frame(alpha_matrix_i2) %>%
+    rownames_to_column("Date") %>%
+    mutate(Date = as.Date(Date))
+alpha_ewma_i2 <- smooth_alpha_i2 %>%
+    mutate(across(-Date, ~ EMA(., n = 10)))
+alpha_sma_i2 <- smooth_alpha_i2 %>%
+    mutate(across(-Date, ~ rollmean(., k = 10, fill = NA, align = "right")))
+
+smooth_alpha_i3 <- as.data.frame(alpha_matrix_i3) %>%
+    rownames_to_column("Date") %>%
+    mutate(Date = as.Date(Date))
+alpha_ewma_i3 <- smooth_alpha_i3 %>%
+    mutate(across(-Date, ~ EMA(., n = 10)))
+alpha_sma_i3 <- smooth_alpha_i1 %>%
     mutate(across(-Date, ~ rollmean(., k = 10, fill = NA, align = "right")))
 
 
@@ -319,7 +352,8 @@ ggplot(smooth_alpha %>% pivot_longer(-Date, names_to = "Currency",
     theme_minimal() +
     scale_colour_viridis_d("Currency", option = "D") +
     theme(legend.position = "bottom", 
-          legend.title = element_blank())
+          legend.title = element_blank()) +
+    ggsave("alpha time series.png")
 
 ggplot(alpha_ewma%>% pivot_longer(-Date, names_to = "Currency",
                                   values_to = "Alpha"),
@@ -330,7 +364,8 @@ ggplot(alpha_ewma%>% pivot_longer(-Date, names_to = "Currency",
     theme_minimal() +
     scale_colour_viridis_d("Currency", option = "D")  +
     theme(legend.position = "bottom", 
-          legend.title = element_blank())
+          legend.title = element_blank()) +
+    ggsave("alpha EWMA time series.png")
 
 ggplot(alpha_sma%>% pivot_longer(-Date, names_to = "Currency",
                                  values_to = "Alpha"), aes(x = Date, y = Alpha, color = Currency)) +
@@ -340,7 +375,119 @@ ggplot(alpha_sma%>% pivot_longer(-Date, names_to = "Currency",
     theme_minimal() +
     scale_colour_viridis_d("Currency", option = "D") +
     theme(legend.position = "bottom", 
-          legend.title = element_blank())
+          legend.title = element_blank()) +
+    ggsave("alpha SMA time series.png")
+
+# plotting alpha i1
+
+ggplot(smooth_alpha_i1 %>% pivot_longer(-Date, names_to = "Currency",
+                                     values_to = "Alpha"),
+       aes(x = Date, y = Alpha, color = Currency)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Alpha") +
+    theme_minimal() +
+    scale_colour_viridis_d("Currency", option = "D") +
+    theme(legend.position = "bottom", 
+          legend.title = element_blank()) +
+    ggsave("alpha Inst 1 time series.png")
+
+ggplot(alpha_ewma_i1%>% pivot_longer(-Date, names_to = "Currency",
+                                  values_to = "Alpha"),
+       aes(x = Date, y = Alpha, color = Currency)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Alpha") +
+    theme_minimal() +
+    scale_colour_viridis_d("Currency", option = "D")  +
+    theme(legend.position = "bottom", 
+          legend.title = element_blank()) +
+    ggsave("alpha Inst 1 EWMA time series.png")
+
+ggplot(alpha_sma_i1%>% pivot_longer(-Date, names_to = "Currency",
+                                 values_to = "Alpha"), aes(x = Date, y = Alpha, color = Currency)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Alpha") +
+    theme_minimal() +
+    scale_colour_viridis_d("Currency", option = "D") +
+    theme(legend.position = "bottom", 
+          legend.title = element_blank()) +
+    ggsave("alpha Inst 1 SMA time series.png")
+
+# plottiong alpha i2
+
+ggplot(smooth_alpha_i2 %>% pivot_longer(-Date, names_to = "Currency",
+                                        values_to = "Alpha"),
+       aes(x = Date, y = Alpha, color = Currency)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Alpha") +
+    theme_minimal() +
+    scale_colour_viridis_d("Currency", option = "D") +
+    theme(legend.position = "bottom", 
+          legend.title = element_blank()) +
+    ggsave("alpha Inst 2 time series.png")
+
+ggplot(alpha_ewma_i2%>% pivot_longer(-Date, names_to = "Currency",
+                                     values_to = "Alpha"),
+       aes(x = Date, y = Alpha, color = Currency)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Alpha") +
+    theme_minimal() +
+    scale_colour_viridis_d("Currency", option = "D")  +
+    theme(legend.position = "bottom", 
+          legend.title = element_blank()) +
+    ggsave("alpha Inst 2 EWMA time series.png")
+
+ggplot(alpha_sma_i2%>% pivot_longer(-Date, names_to = "Currency",
+                                    values_to = "Alpha"), aes(x = Date, y = Alpha, color = Currency)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Alpha") +
+    theme_minimal() +
+    scale_colour_viridis_d("Currency", option = "D") +
+    theme(legend.position = "bottom", 
+          legend.title = element_blank()) +
+    ggsave("alpha Inst 2 SMA time series.png")
+
+# plotting i3
+
+ggplot(smooth_alpha_i3 %>% pivot_longer(-Date, names_to = "Currency",
+                                        values_to = "Alpha"),
+       aes(x = Date, y = Alpha, color = Currency)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Alpha") +
+    theme_minimal() +
+    scale_colour_viridis_d("Currency", option = "D") +
+    theme(legend.position = "bottom", 
+          legend.title = element_blank()) +
+    ggsave("alpha Inst 3 time series.png")
+
+ggplot(alpha_ewma_i3%>% pivot_longer(-Date, names_to = "Currency",
+                                     values_to = "Alpha"),
+       aes(x = Date, y = Alpha, color = Currency)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Alpha") +
+    theme_minimal() +
+    scale_colour_viridis_d("Currency", option = "D")  +
+    theme(legend.position = "bottom", 
+          legend.title = element_blank()) +
+    ggsave("alpha Inst 3 EWMA time series.png")
+
+ggplot(alpha_sma_i3%>% pivot_longer(-Date, names_to = "Currency",
+                                    values_to = "Alpha"), aes(x = Date, y = Alpha, color = Currency)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Alpha") +
+    theme_minimal() +
+    scale_colour_viridis_d("Currency", option = "D") +
+    theme(legend.position = "bottom", 
+          legend.title = element_blank()) +
+    ggsave("alpha Inst 3 SMA time series.png")
 
 ## Simple Portfolio Allocation:
 
@@ -742,8 +889,6 @@ combined_geo_strats %>%
     theme_minimal() +
     theme(legend.position = "bottom")
 
-## Regressions for CAPM? check alpha
-
 
 ## return profiles - volatility, drawdown, Sharpe, etc
 # using peerperformance package
@@ -764,5 +909,14 @@ msharpe(wide_perf[,-1])
 alphaTesting(wide_perf[,"G7_NS_Ret_d"], wide_perf[,"ASIA_NS_Ret_d"])
 alphaScreening()
 
-## loop for comparing strategies
+## plotting weights
 
+alpha_ewma_long %>%
+    pivot_longer(cols = c(w_a, w_d), names_to = "Strategy", values_to = "Weight") %>%
+    ggplot(aes(x = Date, y = Weight, fill = Currency)) +
+    geom_area(position = "stack") +
+    facet_wrap(~ Strategy, ncol = 1) +
+    scale_fill_viridis_d(option = "D") +
+    theme_minimal() +
+    labs(title = "Portfolio Weights Over Time", y = "Weight", x = "Date") +
+    theme(legend.position = "bottom")
