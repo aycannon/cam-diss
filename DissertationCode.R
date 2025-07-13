@@ -267,12 +267,20 @@ roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2, Inst =
                     const = 1
                 ) %>% na.omit()
             
+            Inst_local <- Inst
             
             if (nrow(dat_cur) > 10) {
                 gmm_moments <- function(theta, data, Inst) {
                     alpha <- theta[1]
                     e <- data$forecast_error
-                    z <- as.matrix(data[, c("const", "ALE")])
+                    z <- switch(
+                        as.character(Inst_local),
+                        "0" = matrix(1, nrow = length(e), ncol = 1),
+                        "1" = as.matrix(data[, c("const", "lag_error")]),
+                        "2" = as.matrix(data[, c("const", "lag_error", "lag2_error")]),
+                        "3" = as.matrix(data[, c("const", "ALE")]),
+                        stop("Invalid instrument set. Choose Inst = 0, 1, 2, or 3.")
+                    )
                     lambda <- (e < 0) - alpha
                     g <- z * lambda * abs(e)^(p - 1)
                     return(g)
