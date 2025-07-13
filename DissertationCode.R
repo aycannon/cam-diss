@@ -226,7 +226,7 @@ ggplot(lm_daily_df[1:nrow(lm_daily_df)-1,], aes(x = Currency, y = Slope, color =
     geom_hline(yintercept = 1, linetype = "dashed", color = "grey") +
     geom_errorbar(aes(ymin = Slope - 1.96 * SE.Slope,
                       ymax = Slope + 1.96 * SE.Slope),
-                  width = 0.1) +
+                  width = 0.25, size = 1) +
     labs(x = "Currency", 
          y = "Slope Coefficient") +
     theme_minimal() +
