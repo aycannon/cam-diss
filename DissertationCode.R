@@ -793,6 +793,7 @@ ggsave(file = "allRegionsAllStrats.png",
 west <- c("CAD", "EUR", "GBP", "CHF")
 east <- c("JPY", "SGD", "KRW", "THB")
 g7 <- c("CAD", "EUR", "JPY", "GBP")
+all <- c("CAD", "EUR", "JPY", "GBP", "CHF", "SGD", "KRW", "THB")
 
 compute_strategy <- function(wide_data, returns_long, cols, suffix = NULL) {
     suffix_pattern <- if (!is.null(suffix)) paste0("_", suffix) else ""
@@ -897,6 +898,17 @@ G7_SMA <- compute_strategy(wide_smooth_sma,
 G7_NS <- compute_strategy(wide_non_smooth, 
                             returns_long,
                             cols = g7)
+ALL_EWMA <- compute_strategy(wide_smooth_ewma, 
+                            returns_long, 
+                            suffix = "_EWMA", 
+                            cols = all)
+ALL_SMA <- compute_strategy(wide_smooth_sma, 
+                           returns_long, 
+                           suffix = "_SMA", 
+                           cols = all)
+ALL_NS <- compute_strategy(wide_non_smooth, 
+                          returns_long,
+                          cols = all)
  
 ### combining returns
 
@@ -909,7 +921,10 @@ strat_dfs <- list(
     ASIA_EWMA = ASIA_EWMA,
     WEST_NS = WEST_NS,
     WEST_SMA = WEST_SMA,
-    WEST_EWMA = WEST_EWMA
+    WEST_EWMA = WEST_EWMA,
+    ALL_NS = ALL_NS,
+    ALL_SMA = ALL_SMA,
+    ALL_EWMA = ALL_EWMA
 )
 
 combined_geo_strats <- bind_rows(strat_dfs, .id = "Source") %>%
@@ -963,6 +978,8 @@ wide_perf <- bind_rows(strat_dfs, .id = "Source") %>%
 ret_xts <- xts(wide_perf[,-1], order.by = wide_perf$Date)
 
 alphaScreen <- alphaScreening(X = ret_xts, control = c("nCore" = parallel::detectCores() - 1))
+sharpeScreen <- sharpeScreening(X = ret_xts, control = c("nCore" = parallel::detectCores() - 1))
+msharpeScreen <- msharpeScreening(X = ret_xts, na.neg = F, control = c("nCore" = parallel::detectCores() - 1))
 
 Sharpe <- sharpe(wide_perf[,-1])
 mSharpe <- msharpe(wide_perf[,-1])
@@ -1418,7 +1435,9 @@ wide_perf_i1 <- bind_rows(strat_dfs_i1, .id = "Source") %>%
 
 ret_xts_i1 <- xts(wide_perf_i1[,-1], order.by = wide_perf_i1$Date)
 
-alphaScreen_i1 <- alphaScreening(X = ret_xts_i1, , control = c("nCore" = parallel::detectCores() - 1))
+alphaScreen_i1 <- alphaScreening(X = ret_xts_i1, control = c("nCore" = parallel::detectCores() - 1))
+sharpeScreen_i1 <- sharpeScreening(X = ret_xts_i1, control = c("nCore" = parallel::detectCores() - 1))
+msharpeScreen_i1 <- msharpeScreening(X = ret_xts_i1, control = c("nCore" = parallel::detectCores() - 1))
 
 Sharpe_i1 <- sharpe(wide_perf_i1[,-1])
 mSharpe_i1 <- msharpe(wide_perf_i1[,-1])
@@ -1873,6 +1892,8 @@ wide_perf_i2 <- bind_rows(strat_dfs_i2, .id = "Source") %>%
 ret_xts_i2 <- xts(wide_perf_i2[,-1], order.by = wide_perf_i2$Date)
 
 alphaScreen_i2 <- alphaScreening(X = ret_xts_i2, control = c("nCore" = parallel::detectCores() - 1))
+sharpeScreen_i2 <- sharpeScreening(X = ret_xts_i2, control = c("nCore" = parallel::detectCores() - 1))
+msharpeScreen_i2 <- msharpeScreening(X = ret_xts_i2, control = c("nCore" = parallel::detectCores() - 1))
 
 sharpe(wide_perf_i2[,-1])
 msharpe(wide_perf_i2[,-1])
@@ -2334,6 +2355,8 @@ wide_perf_i3 <- bind_rows(strat_dfs_i3, .id = "Source") %>%
 ret_xts_i3 <- xts(wide_perf_i3[,-1], order.by = wide_perf_i3$Date)
 
 alphaScreen_i3 <- alphaScreening(X = ret_xts_i3, control = c("nCore" = parallel::detectCores() - 1))
+sharpeScreen_i3 <- sharpeScreening(X = ret_xts_i3, control = c("nCore" = parallel::detectCores() - 1))
+msharpeScreen_i3 <- msharpeScreening(X = ret_xts_i3, control = c("nCore" = parallel::detectCores() - 1))
 
 sharpe(wide_perf_i3[,-1])
 msharpe(wide_perf_i3[,-1])
