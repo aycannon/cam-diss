@@ -321,6 +321,13 @@ alpha_matrix_i3 <- alpha_matrix_i3[,1:ncol(alpha_matrix_i3)-1]
 
 ## Plotting the alphas
 
+recessions <- data.frame(
+    start = as.Date(c("2007-12-01", "2020-02-01")),
+    end   = as.Date(c("2009-06-01", "2020-04-01")),
+    label = c("GFC", "COVID")
+)
+
+
 smooth_alpha <- as.data.frame(alpha_matrix) %>%
     rownames_to_column("Date") %>%
     mutate(Date = as.Date(Date))
@@ -329,6 +336,13 @@ alpha_ewma <- smooth_alpha %>%
     mutate(across(-Date, ~ EMA(., n = 10)))
 alpha_sma <- smooth_alpha %>%
     mutate(across(-Date, ~ rollmean(., k = 10, fill = NA, align = "right")))
+
+alpha_vals <- alpha_sma %>%
+    pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
+    pull(Alpha)
+
+alpha_min <- min(alpha_vals, na.rm = TRUE)
+alpha_max <- max(alpha_vals, na.rm = TRUE)
 
 smooth_alpha_i1 <- as.data.frame(alpha_matrix_i1) %>%
     rownames_to_column("Date") %>%
@@ -379,16 +393,35 @@ ggplot(alpha_ewma%>% pivot_longer(-Date, names_to = "Currency",
           legend.title = element_blank())
     ggsave("alpha EWMA time series.png",
            path = "plots/")
+    
+    ggplot(alpha_sma %>% pivot_longer(-Date, names_to = "Currency",
+                                            values_to = "Alpha"),
+           aes(x = Date, y = Alpha, color = Currency)) +
+        geom_line() +
+        labs(x = "Date",
+             y = "Alpha") +
+        theme_minimal() +
+        theme(legend.position = "bottom", 
+              legend.title = element_blank())
+    ggsave("alpha SMA time series.png",
+           path = "plots/")
 
 ggplot(alpha_sma%>% pivot_longer(-Date, names_to = "Currency",
                                  values_to = "Alpha"), aes(x = Date, y = Alpha, color = Currency)) +
+    geom_rect(data = recessions, inherit.aes = FALSE,
+              aes(xmin = start, xmax = end, ymin = 0.57, ymax = 0.69),
+              fill = "darkgrey", alpha = 0.3) +
     geom_line() +
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    theme(legend.position = "bottom", 
-          legend.title = element_blank())
-    ggsave("alpha SMA time series.png",
+    annotate("text", x = as.Date("2008-01-15"), y = .62, label = "Great Recession",
+             angle=90, vjust=-.5, size=4, alpha=0.6) +
+    annotate("text", x = as.Date("2020-03-11"), y = .66, label = "Pandemic Announced", 
+             angle=90, vjust=-.5, size=4, alpha=0.6) +
+    theme(legend.position = "none")
+
+    ggsave("alpha SMA w Recession time series.png",
            path = "plots/")
 
 # plotting alpha i1
