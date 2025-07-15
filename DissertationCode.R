@@ -323,8 +323,14 @@ alpha_matrix_i3 <- alpha_matrix_i3[,1:ncol(alpha_matrix_i3)-1]
 
 recessions <- data.frame(
     start = as.Date(c("2007-12-01", "2020-02-01")),
-    end   = as.Date(c("2009-06-01", "2020-04-01")),
-    label = c("GFC", "COVID")
+    end   = as.Date(c("2009-06-01", "2022-04-01")),
+    label = c("GFC","Oil Crash", "COVID")
+)
+
+key_dates <- data.frame(
+    start = as.Date(c("2014-06-01")),
+    end = as.Date(c("2016-02-01")),
+    label = c("Oil Crash")
 )
 
 
@@ -411,13 +417,18 @@ ggplot(alpha_sma%>% pivot_longer(-Date, names_to = "Currency",
     geom_rect(data = recessions, inherit.aes = FALSE,
               aes(xmin = start, xmax = end, ymin = 0.57, ymax = 0.69),
               fill = "darkgrey", alpha = 0.3) +
+    geom_rect(data = key_dates, inherit.aes = FALSE,
+              aes(xmin = start, xmax = end, ymin = 0.57, ymax = 0.69),
+              fill = "salmon", alpha = 0.3) +
     geom_line() +
     labs(x = "Date",
          y = "Alpha") +
     theme_minimal() +
-    annotate("text", x = as.Date("2008-01-15"), y = .62, label = "Great Recession",
+    annotate("text", x = as.Date("2008-01-11"), y = .62, label = "Great Recession",
              angle=90, vjust=-.5, size=4, alpha=0.6) +
     annotate("text", x = as.Date("2020-03-11"), y = .66, label = "Pandemic Announced", 
+             angle=90, vjust=-.5, size=4, alpha=0.6) +
+    annotate("text", x = as.Date("2014-07-11"), y = .665, label = "Oil Crash",
              angle=90, vjust=-.5, size=4, alpha=0.6) +
     theme(legend.position = "none")
 
