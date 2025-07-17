@@ -2592,3 +2592,190 @@ alpha_weights_i3 %>%
     theme(legend.position = "bottom")
 ggsave(file = "WeightsNSI3.png",
        path = "plots/")
+
+
+
+##### ----- Expectile Regression Strategies -----
+
+## first we want to join the alpha and the monthly data
+monthly_long <- monthly_df1 %>%
+    dplyr::select(YM, ends_with("_prem"), ends_with("_excess")) %>%
+    pivot_longer(-YM, names_to = c("Currency", ".value"), names_sep = "_") %>%
+    rename(Date = YM)
+
+joined <- monthly_long %>%
+    inner_join(alpha_long %>% dplyr::select(Date, Currency, Alpha), by = c("Date", "Currency")) %>%
+    arrange(Currency, Date)
+
+### Expectile regression:
+
+expectile_loss <- function(beta, X, y, tau) {
+    u <- y - X %*% beta
+    weights <- ifelse(u >= 0, tau, 1 - tau)
+    sum(weights * u^2)
+}
+
+expectile_optim <- function(X, y, tau) {
+    X <- as.matrix(cbind(1, X))
+    if (any(is.na(X)) || any(is.na(y))) {
+        message("→ Skipping: NA in input")
+        return(rep(NA_real_, ncol(X)))
+    }
+    
+    start <- tryCatch(coef(lm.fit(X, y)), error = function(e) rep(NA_real_, ncol(X)))
+    if (any(is.na(start))) {
+        message("→ Skipping: OLS failed")
+        return(rep(NA_real_, ncol(X)))
+    }
+    
+    fit <- tryCatch(
+        optim(par = start,
+              fn = expectile_loss,
+              X = X, y = y, tau = tau,
+              method = "BFGS",
+              control = list(fnscale = 1)),
+        error = function(e) NA
+    )
+    
+    if (is.list(fit) && !is.null(fit$par) && all(is.finite(fit$par))) {
+        message("✓ Optim succeeded. β₀ = ", round(fit$par[1], 6),
+                ", β₁ = ", round(fit$par[2], 6), ", tau = ", round(tau, 3))
+        return(as.numeric(fit$par))
+    } else {
+        message("→ Optimization failed or returned NA at tau = ", round(tau, 3))
+        return(rep(NA_real_, ncol(X)))
+    }
+    return(fit$par)
+}
+
+run_expectile_forecast <- function(monthly_df, alpha_df, window = 60) {
+    # Reshape prem and excess into long format
+    data_long <- monthly_df %>%
+        select(YM, ends_with("_prem"), ends_with("_excess")) %>%
+        pivot_longer(-YM, names_to = c("Currency", ".value"), names_sep = "_") %>%
+        rename(Date = YM)
+    
+    # Join alpha source
+    df <- left_join(data_long, alpha_df, by = c("Date", "Currency")) %>%
+        arrange(Currency, Date)
+    
+    all_results <- list()
+    currencies <- unique(df$Currency)
+    
+    for (curr in currencies) {
+        message("Running expectile model for ", curr)
+        d <- df %>% filter(Currency == curr) %>% arrange(Date)
+        
+        n <- nrow(d)
+        d$Beta_0 <- NA_real_
+        d$Beta_1 <- NA_real_
+        d$ExpectileForecast <- NA_real_
+        
+        for (i in (window + 1):(n - 1)) {
+            train <- d[(i - window):(i - 1), ]
+            test <- d[i + 1, ]
+            
+            tau <- train[nrow(train), ]$Alpha  # lagged alpha for asymmetry
+            
+            if (anyNA(train$prem) || anyNA(train$excess) || is.na(tau)) next
+            
+            X_train <- matrix(train$prem, ncol = 1)
+            y_train <- train$excess
+            beta <- as.numeric(expectile_optim(X_train, y_train, tau))
+            if (length(beta) != 2 || any(is.na(beta))) next
+            
+            d$Beta_0[i + 1] <- beta[1]
+            d$Beta_1[i + 1] <- beta[2]
+            
+            x_test <- test$prem
+            if (!is.na(x_test)) {
+                d$ExpectileForecast[i + 1] <- c(1, x_test) %*% beta
+            }
+        }
+        
+        all_results[[curr]] <- d
+    }
+    
+    return(bind_rows(all_results))
+}
+
+
+
+expectile_results <- run_expectile_forecast(monthly_df1, alpha_long, window = 60)
+
+expectile_results <- expectile_results %>%
+    mutate(
+        ForecastError = excess - ExpectileForecast,
+        ForecastLoss = ifelse(
+            ForecastError < 0,
+            2 * (1 - Alpha) * ForecastError^2,
+            2 * Alpha * ForecastError^2
+        ),
+        NaiveError = excess - prem,
+        NaiveLoss = ifelse(
+            NaiveError <0,
+            2 * (1- Alpha) * NaiveError^2,
+            2 * Alpha * NaiveError^2
+        )
+    )
+
+expectile_results %>%
+    summarise(
+        MeanLoss_Expectile = mean(ForecastLoss, na.rm = TRUE),
+        MeanLoss_Naive = mean(NaiveLoss, na.rm = TRUE),
+        RMSE_Expectile = sqrt(mean(ForecastError^2, na.rm = TRUE)),
+        RMSE_Naive = sqrt(mean(NaiveError^2, na.rm = TRUE))
+    )
+
+
+ggplot(expectile_results, aes(x = ExpectileForecast, y = excess)) +
+    geom_point(alpha = 0.5) +
+    geom_smooth(method = "lm", color = "blue", se = FALSE) +
+    labs(
+        title = "Actual vs Forecasted Excess Returns",
+        x = "Forecasted Excess Return",
+        y = "Actual Excess Return"
+    ) +
+    theme_minimal()
+
+
+ggplot(expectile_results, aes(x = ExpectileForecast, y = excess)) +
+    geom_point(alpha = 0.5, size = 0.8) +
+    geom_smooth(method = "lm", color = "blue", se = FALSE) +
+    facet_wrap(~ Currency, scales = "free") +
+    labs(
+        title = "Forecast vs Actual Excess Returns by Currency",
+        x = "Forecasted",
+        y = "Actual"
+    ) +
+    theme_minimal()
+
+
+ggplot(expectile_results, aes(x = Date)) +
+    geom_line(aes(y = excess, color = "Actual")) +
+    geom_line(aes(y = ExpectileForecast, color = "Forecast")) +
+    facet_wrap(~ Currency, scales = "free_y") +
+    labs(
+        title = "Forecasted vs Actual Excess Returns Over Time",
+        y = "Excess Return",
+        color = "Series"
+    ) +
+    theme_minimal()
+
+expectile_results %>%
+    filter(Currency == "CAD") %>%
+    ggplot(aes(x = Date)) +
+    geom_line(aes(y = excess, color = "Actual")) +
+    geom_line(aes(y = ExpectileForecast, color = "Forecast")) +
+    labs(
+        title = "CAD: Forecasted vs Actual Excess Returns",
+        y = "Excess Return",
+        color = "Series"
+    ) +
+    theme_minimal()
+
+
+
+
+
+
