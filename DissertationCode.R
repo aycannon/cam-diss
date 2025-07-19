@@ -908,7 +908,6 @@ compute_strategy <- function(wide_data, returns_long, cols, suffix = NULL) {
             Date   = as.Date(Date)
         )
 }
-
 compute_strategy2 <- function(wide_data, returns_long, cols, suffix = NULL) {
     suffix_pattern <- if (!is.null(suffix)) paste0("_", suffix) else ""
     
@@ -2609,12 +2608,12 @@ joined <- monthly_long %>%
 
 ### Expectile regression:
 
+### --- Expectile Functions ----
 expectile_loss <- function(beta, X, y, tau) {
     u <- y - X %*% beta
     weights <- ifelse(u >= 0, tau, 1 - tau)
     sum(weights * u^2)
 }
-
 expectile_optim <- function(X, y, tau) {
     X <- as.matrix(cbind(1, X))
     if (any(is.na(X)) || any(is.na(y))) {
@@ -2647,7 +2646,6 @@ expectile_optim <- function(X, y, tau) {
     }
     return(fit$par)
 }
-
 run_expectile_forecast <- function(monthly_df, alpha_df, window = 60) {
     # Reshape prem and excess into long format
     data_long <- monthly_df %>%
@@ -2699,7 +2697,7 @@ run_expectile_forecast <- function(monthly_df, alpha_df, window = 60) {
     return(bind_rows(all_results))
 }
 
-
+### Expectile Prelim Results ----
 
 expectile_results <- run_expectile_forecast(monthly_df1, alpha_long, window = 60)
 
@@ -2776,6 +2774,235 @@ expectile_results %>%
 
 
 
+###  ---- Comparing Expectile vs Naive (prem) -----
+
+strategy_df <- expectile_results %>%
+    filter(Currency != "VND") %>%
+    filter(!is.na(prem), !is.na(ExpectileForecast), !is.na(excess)) %>%
+    mutate(
+        Position_Naive = sign(prem),
+        Position_Expectile = sign(ExpectileForecast),
+        Return_Naive = Position_Naive * excess,
+        Return_Expectile = Position_Expectile * excess,
+        weight_forecast = ifelse(!is.na(ExpectileForecast),
+                                 ExpectileForecast, 0),
+        weight_forecast = weight_forecast / sum(abs(weight_forecast), na.rm = TRUE),
+        Return_Weight = weight_forecast * excess
+    )
+
+portfolio_returns_exp <- strategy_df %>%
+    group_by(Date) %>%
+    summarise(
+        PortReturn_Naive = mean(Return_Naive, na.rm = TRUE),
+        PortReturn_Expectile = mean(Return_Expectile, na.rm = TRUE),
+        PortReturn_Weight = sum(Return_Weight, na.rm = TRUE),
+        Active_Naive = sum(!is.na(Return_Naive)),
+        Active_Expectile = sum(!is.na(Return_Expectile))
+    ) %>%
+    filter(!is.na(PortReturn_Naive), !is.na(PortReturn_Expectile))
+
+portfolio_returns_exp <- portfolio_returns_exp %>%
+    mutate(
+        Cum_Naive = cumsum(PortReturn_Naive),
+        Cum_Expectile = cumsum(PortReturn_Expectile),
+        Cum_Weight = cumsum(PortReturn_Weight),
+    )
+
+# Plot
+ggplot(portfolio_returns_exp, aes(x = Date)) +
+    geom_line(aes(y = Cum_Naive, color = "Naive")) +
+    geom_line(aes(y = Cum_Expectile, color = "Expectile")) +
+    labs(title = "Cumulative Portfolio Returns",
+         y = "Cumulative Return",
+         color = "Strategy") +
+    theme_minimal() +
+    theme(legend.position = "bottom")
 
 
 
+
+
+
+
+### --- Compute Expectile Strategies ----
+
+compute_strategy_expectile <- function(forecast_df, return_df, suffix = NULL, cols = NULL) {
+    suffix_pattern <- if (!is.null(suffix)) paste0("_", suffix) else ""
+    
+    # Clean and align
+    strategy_df <- forecast_df %>%
+        filter(!is.na(ExpectileForecast), !is.na(excess)) %>%
+        filter(Currency != "VND") %>%
+        mutate(
+            Position = sign(ExpectileForecast),
+            ForecastError = excess - ExpectileForecast,
+            ForecastLoss = ifelse(
+                ForecastError < 0,
+                2 * (1 - Alpha) * ForecastError^2,
+                2 * Alpha * ForecastError^2
+            ),
+            PositionNaive = sign(prem)
+        ) %>%
+        left_join(return_df, by = c("Date", "Currency")) %>%
+        mutate(
+            Return = Position * ExcessReturn,
+            ReturnNaive = PositionNaive * ExcessReturn
+        )
+    
+    if (!is.null(cols)) {
+        strategy_df <- strategy_df %>% filter(Currency %in% cols)
+    }
+    
+    # Portfolio returns (equal weight across currencies)
+    port_returns <- strategy_df %>%
+        group_by(Date) %>%
+        summarise(
+            PortReturn = mean(Return, na.rm = TRUE),
+            PortLoss = mean(ForecastLoss, na.rm = TRUE),
+            n_assets = sum(!is.na(Return)),
+            PortReturn_naive = mean(ReturnNaive, na.rm = TRUE),
+            .groups = "drop"
+        ) %>%
+        mutate(
+            Cumulative = cumprod(1 + PortReturn) - 1,
+            Cum_Naive = cumprod(1 + PortReturn_naive) - 1
+        )
+    
+    return(list(
+        weights = strategy_df %>%
+            select(Date, Currency, Alpha, ExpectileForecast, Position, ForecastLoss),
+        returns = port_returns
+    ))
+}
+
+
+#### Implementing the expectile strats function ----
+
+forecast_df_exp <- run_expectile_forecast(monthly_df1, alpha_long, window = 60)
+forecast_exp_ewma <- run_expectile_forecast(monthly_df1, alpha_ewma_long, window = 60)
+forecast_exp_sma <- run_expectile_forecast(monthly_df1, alpha_sma_long, window = 60)
+
+all_exp <- compute_strategy_expectile(forecast_df_exp, returns_long)
+all_exp_ewma <- compute_strategy_expectile(forecast_exp_ewma, returns_long)
+all_exp_sma <- compute_strategy_expectile(forecast_exp_sma, returns_long)
+
+g7_exp <- compute_strategy_expectile(forecast_df_exp, returns_long, cols = g7)
+g7_exp_ewma <- compute_strategy_expectile(forecast_exp_ewma, returns_long, cols = g7)
+g7_exp_sma <- compute_strategy_expectile(forecast_exp_sma, returns_long, cols = g7)
+
+asia_exp <- compute_strategy_expectile(forecast_df_exp, returns_long, cols = east)
+asia_exp_ewma <- compute_strategy_expectile(forecast_exp_ewma, returns_long, cols = east)
+asia_exp_sma <- compute_strategy_expectile(forecast_exp_sma, returns_long, cols = east)
+
+west_exp <- compute_strategy_expectile(forecast_df_exp, returns_long, cols = west)
+west_exp_ewma <- compute_strategy_expectile(forecast_exp_ewma, returns_long, cols = west)
+west_exp_sma <- compute_strategy_expectile(forecast_exp_sma, returns_long, cols = west)
+
+### Combine all strategies into one data frame
+combined_exp_strats <- bind_rows(
+    all_exp$returns %>% mutate(Source = "All",
+                               Smoothing = "NS"),
+    all_exp_ewma$returns %>% mutate(Source = "All",
+                                    Smoothing = "EWMA"),
+    all_exp_sma$returns %>% mutate(Source = "All",
+                                   Smoothing = "SMA"),
+    g7_exp$returns %>% mutate(Source = "G7",
+                               Smoothing = "NS"),
+    g7_exp_ewma$returns %>% mutate(Source = "G7",
+                                   Smoothing = "EWMA"),
+    g7_exp_sma$returns %>% mutate(Source = "G7",
+                                   Smoothing = "SMA"),
+    asia_exp$returns %>% mutate(Source = "Asia",
+                                Smoothing = "NS"),
+    asia_exp_ewma$returns %>% mutate(Source = "Asia",
+                                     Smoothing = "EWMA"),
+    asia_exp_sma$returns %>% mutate(Source = "Asia",
+                                     Smoothing = "SMA"),
+    west_exp$returns %>% mutate(Source = "West",
+                                Smoothing = "NS"),
+    west_exp_ewma$returns %>% mutate(Source = "West",
+                                    Smoothing = "EWMA"),
+    west_exp_sma$returns %>% mutate(Source = "West",
+                                     Smoothing = "SMA")
+)
+# Reshape for plotting
+combined_exp_strats_long <- combined_exp_strats %>%
+    pivot_longer(cols = c(PortReturn, PortLoss, Cumulative, Cum_Naive), names_to = "Metric", values_to = "Value") %>%
+    mutate(
+        Strategy = case_when(
+            Metric == "PortReturn" ~ "Portfolio Return",
+            Metric == "PortLoss" ~ "Portfolio Loss",
+            Metric == "Cumulative" ~ "Expectile Forecast",
+            Metric == "Cum_Naive" ~ "Naive Forecast",
+            TRUE ~ Metric
+        )
+    ) %>%
+    mutate(
+        Smoothing = factor(Smoothing, levels = c("NS", "EWMA", "SMA")),
+        Source = factor(Source, levels = c("All", "G7", "Asia", "West"))
+    )
+
+# Plotting the cumulative returns for all strategies
+ggplot(combined_exp_strats_long %>% filter(
+    Strategy %in% c("Expectile Forecast", "Naive Forecast"),
+    Smoothing == "NS"), 
+       aes(x = Date, y = Value, color = Source, linetype = Strategy)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Cumulative Return") +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+ggplot(combined_exp_strats_long %>% filter(
+    Metric %in% c("Cumulative Return", "Naive Cumulative Return"),
+    Smoothing == "SMA"), 
+    aes(x = Date, y = Value, color = Source, linetype = Metric)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Cumulative Return") +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+ggplot(combined_exp_strats_long %>% filter(
+    Metric %in% c("Cumulative Return", "Naive Cumulative Return"),
+    Smoothing == "EWMA"), 
+    aes(x = Date, y = Value, color = Source, linetype = Metric)) +
+    geom_line() +
+    labs(x = "Date",
+         y = "Cumulative Return") +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
+
+
+ggplot(
+    combined_exp_strats_long %>%
+        filter(Strategy %in% c("Expectile Forecast", "Naive Forecast")),
+    aes(x = Date, y = Value, color = Smoothing, linetype = Strategy)
+) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "salmon", alpha = 0.5) +
+    geom_line() +
+    facet_wrap(~ Source, scales = "fixed", nrow = 2) +
+    labs(
+        x = "Date", y = "Cumulative Return"
+    ) +
+    theme_minimal() +
+    theme(
+        legend.position = "bottom")
+ggsave("ExpectileStrats.png",
+       path = "plots/")
+
+
+combined_geo_strats %>%
+    ggplot(aes(x = Date, y = CumulativeReturn, color = Smoothing, linetype = Strategy)) +
+    geom_hline(yintercept = 0, linetype = "dashed", color = "salmon", alpha = 0.5) +
+    geom_line() +
+    facet_wrap(~ Region, scales = "free_y", nrow = 2) +
+    labs(
+        x = "Date", y = "Cumulative Return"
+    ) +
+    theme_minimal() +
+    theme(
+        legend.position = "bottom")
+ggsave("CombinedGeoStrats.png",
+       path = "plots/")
