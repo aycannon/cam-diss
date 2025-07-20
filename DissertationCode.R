@@ -2846,6 +2846,9 @@ ggplot(dm_rolling_by_currency, aes(x = Date, y = DM_stat, color = Currency)) +
     labs(y = "Rolling Diebold–Mariano Statistic", x = "Date") +
     facet_wrap(~ Currency, scales = "free_y") +
     theme_minimal()
+ggsave("RollingDMtestCurrency.png",
+       path = "plots/",
+       width = 10, height = 6)
 
 dm_rolling_aggregate <- expectile_results %>%
     filter(!is.na(ForecastLoss), !is.na(NaiveLoss)) %>%
@@ -2864,6 +2867,9 @@ ggplot(dm_rolling_aggregate, aes(x = Date, y = DM_stat)) +
     geom_hline(yintercept = -qnorm(0.975), linetype = "dashed", color = "grey40") +
     labs(y = "Rolling Diebold–Mariano Statistic", x = "Date") +
     theme_minimal()
+ggsave("RollingDMtestAggregate.png",
+       path = "plots/",
+       width = 10, height = 6)
 
 
 
