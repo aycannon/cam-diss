@@ -474,7 +474,6 @@ alpha_se_sma <- as.data.frame(alpha_se) %>%
 
 plotting_alpha_se_df <- alpha_sma %>%
     pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
-    filter(Currency %in% c("EUR", "GBP", "JPY", "CAD")) %>%
     left_join(alpha_se_sma %>% pivot_longer(-Date, names_to = "Currency", values_to = "SE"),
               by = c("Date", "Currency")) %>%
     mutate(
@@ -490,6 +489,9 @@ ggplot(plotting_alpha_se_df, aes(x = Date, y = Alpha, color = Currency, fill = C
          x = "Date", y = expression(alpha)) +
     theme_minimal() +
     theme(legend.position = "bottom")
+ggsave("alpha with SE.png",
+       path = "plots/",
+       width = 10, height = 6)
 
 
 # plotting alpha i1
