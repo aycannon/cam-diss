@@ -2831,6 +2831,30 @@ expectile_results %>%
     ) +
     theme_minimal()
 
+mz_table <- expectile_results %>%
+    filter(!is.na(ExpectileForecast), !is.na(excess)) %>%
+    group_by(Currency) %>%
+    group_modify(~ {
+        model <- lm(excess ~ ExpectileForecast, data = .x)
+        tidy_res <- tidy(model)
+        glance_res <- glance(model)
+        linear_test <- car::linearHypothesis(model, c("ExpectileForecast = 1", "(Intercept) = 0"))
+        
+        tibble(
+            Intercept     = tidy_res$estimate[1],
+            SE_Intercept  = tidy_res$std.error[1],
+            Beta          = tidy_res$estimate[2],
+            SE_Beta       = tidy_res$std.error[2],
+            t_Beta        = tidy_res$statistic[2],
+            p_Beta        = tidy_res$p.value[2],
+            F_optimality  = linear_test$F[2],
+            p_optimality  = linear_test$`Pr(>F)`[2],
+            R2            = glance_res$r.squared,
+            N             = glance_res$nobs
+        )
+    }) %>%
+    ungroup()
+print(mz_table)
 
 
 ###  ---- Comparing Expectile vs Naive (prem) -----
