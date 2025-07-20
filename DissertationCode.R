@@ -252,6 +252,7 @@ roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2, Inst =
         f_col <- paste0(cur, "_prem")
         
         alpha_vec <- rep(NA_real_, length(date_seq))
+        alpha_se_vec <- rep(NA_real_, length(date_seq))
         
         for (i in seq_along(date_seq)) {
             idx_start <- i
@@ -291,40 +292,68 @@ roll_alpha_gmm_parallel <- function(data, currencies, window = 60, p = 2, Inst =
                         type = "cue", method = "BFGS")
                 }, error = function(e) NULL)
                 
-                alpha_vec[i] <- if (!is.null(res)) inv_logit(coef(res)[1]) else NA
+                if (!is.null(res)) {
+                    alpha_logit     <- coef(res)[1]
+                    alpha_hat       <- inv_logit(alpha_logit)
+                    
+                    # Delta method: SE(logit) × derivative of inverse logit
+                    vcov_mat <- tryCatch(vcov(res), error = function(e) NA)
+                    
+                    if (!anyNA(vcov_mat)) {
+                        se_logit     <- sqrt(vcov_mat[1, 1])
+                        se_alpha     <- se_logit * alpha_hat * (1 - alpha_hat)
+                    } else {
+                        se_alpha     <- NA
+                    }
+                    
+                    alpha_vec[i]    <- alpha_hat
+                    alpha_se_vec[i] <- se_alpha
+                } else {
+                    alpha_vec[i]    <- NA
+                    alpha_se_vec[i] <- NA
+                }
+                
             }
         }
         
-        return(alpha_vec)
+        return(list(alpha = alpha_vec, se = alpha_se_vec))
     }
     
     # Run in parallel
-    alpha_list <- future_map(currencies, estimate_alpha_for_currency, .progress = TRUE)
+    alpha_list       <- future_map(currencies, estimate_alpha_for_currency, .progress = TRUE)
     names(alpha_list) <- currencies
     
-    alpha_matrix <- do.call(cbind, alpha_list)
-    rownames(alpha_matrix) <- as.character(date_seq)
-    return(alpha_matrix)
+    alpha_matrix     <- do.call(cbind, lapply(alpha_list, `[[`, "alpha"))
+    alpha_se_matrix  <- do.call(cbind, lapply(alpha_list, `[[`, "se"))
+    rownames(alpha_matrix)    <- as.character(date_seq)
+    rownames(alpha_se_matrix) <- as.character(date_seq)
+    
+    return(list(alpha = alpha_matrix, se = alpha_se_matrix))
 }
 
-alpha_matrix <- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 0)
-alpha_matrix_i1<- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 1)
-alpha_matrix_i2<- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 2)
-alpha_matrix_i3<- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 3)
+alpha_results <- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 0)
+alpha_results_i1<- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 1)
+alpha_results_i2<- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 2)
+alpha_results_i3<- roll_alpha_gmm_parallel(monthly_df1, spot_cols, window = 60, p = p, Inst = 3)
 
 ## we want to remove Vietnamese Dong as there are so many NAs
 
-alpha_matrix <- alpha_matrix[,1:ncol(alpha_matrix)-1]
-alpha_matrix_i1 <- alpha_matrix_i1[,1:ncol(alpha_matrix_i1)-1]
-alpha_matrix_i2 <- alpha_matrix_i2[,1:ncol(alpha_matrix_i2)-1]
-alpha_matrix_i3 <- alpha_matrix_i3[,1:ncol(alpha_matrix_i3)-1]
+alpha_matrix <- alpha_results$alpha[,1:ncol(alpha_results$alpha)-1]
+alpha_matrix_i1 <- alpha_results_i1$alpha[,1:ncol(alpha_results_i1$alpha)-1]
+alpha_matrix_i2 <- alpha_results_i2$alpha[,1:ncol(alpha_results_i2$alpha)-1]
+alpha_matrix_i3 <- alpha_results_i3$alpha[,1:ncol(alpha_results_i3$alpha)-1]
+
+alpha_se <- alpha_results$se[,1:ncol(alpha_results$se)-1]
+alpha_se_i1 <- alpha_results_i1$se[,1:ncol(alpha_results_i1$se)-1]
+alpha_se_i2 <- alpha_results_i2$se[,1:ncol(alpha_results_i2$se)-1]
+alpha_se_i3 <- alpha_results_i3$se[,1:ncol(alpha_results_i3$se)-1]
 
 ## Plotting the alphas
 
 recessions <- data.frame(
     start = as.Date(c("2007-12-01", "2020-02-01")),
     end   = as.Date(c("2009-06-01", "2022-04-01")),
-    label = c("GFC","Oil Crash", "COVID")
+    label = c("GFC", "COVID")
 )
 
 key_dates <- data.frame(
@@ -434,6 +463,34 @@ ggplot(alpha_sma%>% pivot_longer(-Date, names_to = "Currency",
 
     ggsave("alpha SMA w Recession time series.png",
            path = "plots/")
+    
+### smoothing the standard errors for plotting:
+    
+alpha_se_sma <- as.data.frame(alpha_se) %>%
+    rownames_to_column("Date") %>%
+    mutate(Date = as.Date(Date)) %>%
+    arrange(Date) %>%
+    mutate(across(-Date, ~ rollmean(., k = 10, fill = NA, align = "right")))
+
+plotting_alpha_se_df <- alpha_sma %>%
+    pivot_longer(-Date, names_to = "Currency", values_to = "Alpha") %>%
+    filter(Currency %in% c("EUR", "GBP", "JPY", "CAD")) %>%
+    left_join(alpha_se_sma %>% pivot_longer(-Date, names_to = "Currency", values_to = "SE"),
+              by = c("Date", "Currency")) %>%
+    mutate(
+        Lower = Alpha - 1.96 * SE,
+        Upper = Alpha + 1.96 * SE
+    )
+
+ggplot(plotting_alpha_se_df, aes(x = Date, y = Alpha, color = Currency, fill = Currency)) +
+    geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.2, color = NA) +
+    geom_line() +
+    geom_hline(yintercept = 0.5, linetype = "dashed") +
+    labs(
+         x = "Date", y = expression(alpha)) +
+    theme_minimal() +
+    theme(legend.position = "bottom")
+
 
 # plotting alpha i1
 
