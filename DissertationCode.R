@@ -2783,6 +2783,26 @@ expectile_results %>%
         RMSE_Expectile = sqrt(mean(ForecastError^2, na.rm = TRUE)),
         RMSE_Naive = sqrt(mean(NaiveError^2, na.rm = TRUE))
     )
+expectile_results %>%    
+    # Diebold-Marino Test under asymmetric loss
+    mutate(loss_diff = ForecastLoss - NaiveLoss) %>%
+    summarise(
+        DM_stat = mean(loss_diff, na.rm = TRUE) / (sd(loss_diff, na.rm = TRUE) / sqrt(n())),
+        p_value = 2 * (1 - pnorm(abs(DM_stat)))
+    )
+
+dm_by_currency <- expectile_results %>%
+    filter(!is.na(ForecastLoss), !is.na(NaiveLoss)) %>%
+    group_by(Currency) %>%
+    summarise(
+        DM_stat = mean(ForecastLoss - NaiveLoss, na.rm = TRUE) /
+            (sd(ForecastLoss - NaiveLoss, na.rm = TRUE) / sqrt(n())),
+        p_value = 2 * (1 - pnorm(abs(DM_stat))),
+        .groups = "drop"
+    ) %>%
+    arrange(p_value)
+
+
 
 
 ggplot(expectile_results, aes(x = ExpectileForecast, y = excess)) +
