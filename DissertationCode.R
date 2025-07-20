@@ -482,7 +482,7 @@ plotting_alpha_se_df <- alpha_sma %>%
     )
 
 ggplot(plotting_alpha_se_df, aes(x = Date, y = Alpha, color = Currency, fill = Currency)) +
-    geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.2, color = NA) +
+    geom_ribbon(aes(ymin = Lower, ymax = Upper), alpha = 0.1, color = NA) +
     geom_line() +
     geom_hline(yintercept = 0.5, linetype = "dashed") +
     labs(
@@ -492,6 +492,11 @@ ggplot(plotting_alpha_se_df, aes(x = Date, y = Alpha, color = Currency, fill = C
 ggsave("alpha with SE.png",
        path = "plots/",
        width = 10, height = 6)
+
+plotting_alpha_se_df %>%
+    summarise(
+        prop_0.5 = mean(Lower < 0.5, na.rm = TRUE),
+    )
 
 
 # plotting alpha i1
@@ -2801,6 +2806,65 @@ dm_by_currency <- expectile_results %>%
         .groups = "drop"
     ) %>%
     arrange(p_value)
+
+rolling_dm <- function(df, window = 60) {
+    n <- nrow(df)
+    dm_stats <- rep(NA_real_, n - window + 1)
+    p_values <- rep(NA_real_, n - window + 1)
+    dates <- df$Date[window:n]
+    
+    for (i in seq_len(n - window + 1)) {
+        sub_df <- df[i:(i + window - 1), ]
+        d <- sub_df$ForecastLoss - sub_df$NaiveLoss
+        d <- d[!is.na(d)]
+        if (length(d) > 10) {
+            dm_stat <- mean(d) / (sd(d) / sqrt(length(d)))
+            p_val <- 2 * (1 - pnorm(abs(dm_stat)))
+            
+            dm_stats[i] <- dm_stat
+            p_values[i] <- p_val
+        }
+    }
+    
+    return(tibble(
+        Date = dates,
+        DM_stat = dm_stats,
+        p_value = p_values
+    ))
+}
+
+dm_rolling_by_currency <- expectile_results %>%
+    filter(!is.na(ForecastLoss), !is.na(NaiveLoss)) %>%
+    group_by(Currency) %>%
+    group_modify(~ rolling_dm(.x, window = 60)) %>%
+    ungroup()
+
+ggplot(dm_rolling_by_currency, aes(x = Date, y = DM_stat, color = Currency)) +
+    geom_line() +
+    geom_hline(yintercept = qnorm(0.975), linetype = "dashed", color = "grey40") +
+    geom_hline(yintercept = -qnorm(0.975), linetype = "dashed", color = "grey40") +
+    labs(y = "Rolling Diebold–Mariano Statistic", x = "Date") +
+    facet_wrap(~ Currency, scales = "free_y") +
+    theme_minimal()
+
+dm_rolling_aggregate <- expectile_results %>%
+    filter(!is.na(ForecastLoss), !is.na(NaiveLoss)) %>%
+    arrange(Date) %>%
+    group_by(Date) %>%
+    summarise(
+        ForecastLoss = mean(ForecastLoss, na.rm = TRUE),
+        NaiveLoss = mean(NaiveLoss, na.rm = TRUE),
+        .groups = "drop"
+    ) %>%
+    rolling_dm(window = 60)
+
+ggplot(dm_rolling_aggregate, aes(x = Date, y = DM_stat)) +
+    geom_line() +
+    geom_hline(yintercept = qnorm(0.975), linetype = "dashed", color = "grey40") +
+    geom_hline(yintercept = -qnorm(0.975), linetype = "dashed", color = "grey40") +
+    labs(y = "Rolling Diebold–Mariano Statistic", x = "Date") +
+    theme_minimal()
+
 
 
 
