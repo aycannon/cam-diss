@@ -36,6 +36,7 @@ library(car)
 library(RcppRoll)
 # install.packages('latex2exp')
 # library(latex2exp)
+library(slider)
 
 
 # library(VIM)

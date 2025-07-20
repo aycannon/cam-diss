@@ -2833,10 +2833,36 @@ rolling_dm <- function(df, window = 60) {
     ))
 }
 
+# Function to extract runs of significance
+get_sig_blocks <- function(df) {
+    v       <- df$Significant 
+    rle_out <- rle(v)
+    lengths <- rle_out$lengths
+    values  <- rle_out$values
+    ends    <- cumsum(lengths)
+    starts  <- c(1, head(ends + 1, -1))
+    
+    sig_runs <- tibble(
+        Currency = df$Currency[1],
+        start = df$Date[starts],
+        end   = df$Date[ends],
+        sig   = values
+    ) %>% filter(sig)
+    
+    return(sig_runs)
+}
+
+
 dm_rolling_by_currency <- expectile_results %>%
     filter(!is.na(ForecastLoss), !is.na(NaiveLoss)) %>%
     group_by(Currency) %>%
     group_modify(~ rolling_dm(.x, window = 60)) %>%
+    ungroup() %>%
+    mutate(Significant = abs(DM_stat) > qnorm(0.975))
+
+sig_blocks <- dm_rolling_by_currency %>%
+    group_by(Currency) %>%
+    group_modify(get_sig_blocks(.x)) %>%
     ungroup()
 
 ggplot(dm_rolling_by_currency, aes(x = Date, y = DM_stat, color = Currency)) +
@@ -2845,7 +2871,8 @@ ggplot(dm_rolling_by_currency, aes(x = Date, y = DM_stat, color = Currency)) +
     geom_hline(yintercept = -qnorm(0.975), linetype = "dashed", color = "grey40") +
     labs(y = "Rolling Diebold–Mariano Statistic", x = "Date") +
     facet_wrap(~ Currency, scales = "free_y") +
-    theme_minimal()
+    theme_minimal() +
+    theme(legend.position = "none")
 ggsave("RollingDMtestCurrency.png",
        path = "plots/",
        width = 10, height = 6)
@@ -2870,6 +2897,39 @@ ggplot(dm_rolling_aggregate, aes(x = Date, y = DM_stat)) +
 ggsave("RollingDMtestAggregate.png",
        path = "plots/",
        width = 10, height = 6)
+
+# Create a logical column to flag significance
+dm_agg_df <- dm_rolling_aggregate %>%
+    mutate(significant = DM_stat > 1.96)
+
+# Identify contiguous significant regions
+rle_sig <- rle(dm_agg_df$significant)
+lengths <- rle_sig$lengths
+values <- rle_sig$values
+ends <- cumsum(lengths)
+starts <- c(1, head(ends + 1, -1))
+
+rects <- tibble(start = starts, end = ends, is_sig = values) %>%
+    filter(is_sig) %>%
+    mutate(
+        xmin = dm_agg_df$Date[start],
+        xmax = dm_agg_df$Date[end]
+    )
+
+# Plot
+ggplot(dm_agg_df, aes(x = Date, y = DM_stat)) +
+    geom_rect(data = rects,
+              aes(xmin = xmin, xmax = xmax, ymin = -Inf, ymax = Inf),
+              fill = "grey", alpha = 0.2, inherit.aes = FALSE) +
+    geom_line(color = "black") +
+    geom_hline(yintercept = qnorm(0.975), linetype = "dashed", color = "grey40") +
+    geom_hline(yintercept = -qnorm(0.975), linetype = "dashed", color = "grey40") +
+    theme_minimal() +
+    labs(y = "Rolling DM Statistic")
+ggsave("RollingDMtestAggregate2.png",
+       path = "plots/",
+       width = 10, height = 6)
+
 
 
 
@@ -3179,3 +3239,84 @@ combined_geo_strats %>%
         legend.position = "bottom")
 ggsave("CombinedGeoStrats.png",
        path = "plots/")
+
+
+
+
+##### --- Comparing Expectile with all others ----
+
+
+# rearrange expectile results:
+
+exp_returns <- combined_exp_strats_long %>%
+    filter(Metric == "PortReturn") %>%
+    mutate(
+        Strategy = paste(Source, Smoothing, "Expectile", sep = "_")
+    ) %>%
+    dplyr::select(Date, Strategy, Return = Value)
+
+naive_returns <- combined_exp_strats_long %>%
+    dplyr::select(Date, Source, Smoothing, PortReturn_naive) %>%
+    distinct(Date, Source, Smoothing, PortReturn_naive) %>%
+    rename(Value = PortReturn_naive) %>%
+    mutate(
+        Strategy = paste(Source, Smoothing, "Naive", sep = "_")
+    ) %>%
+    dplyr::select(Date, Strategy, Return = Value)
+
+
+geo_returns <- combined_geo_strats %>%
+    rename(Alpha = Ret_a,
+           Delta = Ret_d,
+           Ranked = Ret_r) %>%
+    pivot_longer(cols = c(Alpha, Delta, Ranked), names_to = "strat", values_to = "Return") %>%
+    mutate(Strategy = paste(Region, Smoothing, strat, sep = "_")) %>%
+    dplyr::select(Date, Strategy, Return)
+
+all_portfolios <- bind_rows(
+    exp_returns,
+    naive_returns,
+    geo_returns
+) %>%
+    arrange(Date) %>%
+    group_by(Date, Strategy) %>%
+    summarise(Return = mean(Return, na.rm = TRUE), .groups = "drop")
+
+all_portfolios_wide <- all_portfolios %>%
+    pivot_wider(names_from = Strategy, values_from = Return) 
+
+min_common_date <- all_portfolios %>%
+    group_by(Strategy) %>%
+    summarise(min_date = min(Date)) %>%
+    summarise(max(min_date)) %>%
+    pull()
+
+all_portfolios_wide <- all_portfolios_wide %>%
+    filter(Date >= min_common_date) %>%
+    arrange(Date)
+
+all_portfolios_wide %>% dplyr::select(sort(names(.)))
+all_portfolios_wide <- all_portfolios_wide[, c("Date", 
+                                               "All_NS_Naive", "All_NS_Expectile", "ALL_NS_Alpha", "ALL_NS_Delta", "ALL_NS_Ranked",
+                                               "All_SMA_Naive", "All_SMA_Expectile", "ALL_SMA_Alpha", "ALL_SMA_Delta", "ALL_SMA_Ranked",
+                                               "All_EWMA_Naive", "All_EWMA_Expectile", "ALL_EWMA_Alpha", "ALL_EWMA_Delta", "ALL_EWMA_Ranked",
+                                               "G7_NS_Naive", "G7_NS_Expectile", "G7_NS_Alpha", "G7_NS_Delta", "G7_NS_Ranked",
+                                               "G7_SMA_Naive", "G7_SMA_Expectile", "G7_SMA_Alpha", "G7_SMA_Delta", "G7_SMA_Ranked",
+                                               "G7_EWMA_Naive", "G7_EWMA_Expectile", "G7_EWMA_Alpha", "G7_EWMA_Delta", "G7_EWMA_Ranked",
+                                               "Asia_NS_Naive", "Asia_NS_Expectile", "ASIA_NS_Alpha", "ASIA_NS_Delta", "ASIA_NS_Ranked",
+                                               "Asia_SMA_Naive", "Asia_SMA_Expectile", "ASIA_SMA_Alpha", "ASIA_SMA_Delta", "ASIA_SMA_Ranked",
+                                               "Asia_EWMA_Naive", "Asia_EWMA_Expectile", "ASIA_EWMA_Alpha", "ASIA_EWMA_Delta", "ASIA_EWMA_Ranked",
+                                               "West_NS_Naive", "West_NS_Expectile", "WEST_NS_Alpha", "WEST_NS_Delta", "WEST_NS_Ranked",
+                                               "West_SMA_Naive", "West_SMA_Expectile", "WEST_SMA_Alpha", "WEST_SMA_Delta", "WEST_SMA_Ranked",
+                                               "West_EWMA_Naive", "West_EWMA_Expectile", "WEST_EWMA_Alpha", "WEST_EWMA_Delta", "WEST_EWMA_Ranked")]
+
+all_portfolios_xts <- xts(all_portfolios_wide[,-1], order.by = all_portfolios_wide$Date)
+
+all_alphaScreen <- alphaScreening(all_portfolios_xts, control = c("nCore" = parallel::detectCores() - 1))
+all_sharpeScreen <- sharpeScreening(all_portfolios_xts, control = c("nCore" = parallel::detectCores() - 1))
+all_msharpeScreen <- msharpeScreening(all_portfolios_xts, control = c("nCore" = parallel::detectCores() - 1))
+
+
+
+
+
