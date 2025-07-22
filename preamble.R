@@ -37,6 +37,7 @@ library(RcppRoll)
 # install.packages('latex2exp')
 # library(latex2exp)
 library(slider)
+library(cvar)
 
 
 # library(VIM)
@@ -52,7 +53,7 @@ library(TTR) # HLOC vol estimation
 
 # library(tidyquant)
 library(quantmod)
-# library(PortfolioAnalytics)
+library(PortfolioAnalytics)
 library(MarkowitzR)
 library(quadprog)
 library(XICOR)

@@ -1598,6 +1598,18 @@ G7_NS_i1 <- compute_strategy(wide_non_smooth_i1,
                              returns_long,
                              cols = g7)
 
+ALL_EWMA_i1 <- compute_strategy(wide_smooth_ewma_i1, 
+                               returns_long, 
+                               suffix = "_EWMA", 
+                               cols = all)
+ALL_SMA_i1 <- compute_strategy(wide_smooth_sma_i1, 
+                              returns_long, 
+                              suffix = "_SMA", 
+                              cols = all)
+ALL_NS_i1 <- compute_strategy(wide_non_smooth_i1, 
+                             returns_long,
+                             cols = all)
+
 ### combining returns
 
 strat_dfs_i1 <- list(
@@ -1609,7 +1621,10 @@ strat_dfs_i1 <- list(
     ASIA_EWMA_i1 = ASIA_EWMA_i1,
     WEST_NS_i1 = WEST_NS_i1,
     WEST_SMA_i1 = WEST_SMA_i1,
-    WEST_EWMA_i1 = WEST_EWMA_i1
+    WEST_EWMA_i1 = WEST_EWMA_i1,
+    ALL_NS_i1 = ALL_NS_i1,
+    ALL_SMA_i1 = ALL_SMA_i1,
+    ALL_EWMA_i1 = ALL_EWMA_i1
 )
 
 combined_geo_strats_i1 <- bind_rows(strat_dfs_i1, .id = "Source") %>%
@@ -2052,6 +2067,17 @@ G7_SMA_i2 <- compute_strategy(wide_smooth_sma_i2,
 G7_NS_i2 <- compute_strategy(wide_non_smooth_i2, 
                              returns_long,
                              cols = g7)
+ALL_EWMA_i2 <- compute_strategy(wide_smooth_ewma_i2, 
+                               returns_long, 
+                               suffix = "_EWMA", 
+                               cols = all)
+ALL_SMA_i2 <- compute_strategy(wide_smooth_sma_i2, 
+                              returns_long, 
+                              suffix = "_SMA", 
+                              cols = all)
+ALL_NS_i2 <- compute_strategy(wide_non_smooth_i2, 
+                             returns_long,
+                             cols = all)
 
 ### combining returns
 
@@ -2064,7 +2090,10 @@ strat_dfs_i2 <- list(
     ASIA_EWMA_i2 = ASIA_EWMA_i2,
     WEST_NS_i2 = WEST_NS_i2,
     WEST_SMA_i2 = WEST_SMA_i2,
-    WEST_EWMA_i2 = WEST_EWMA_i2
+    WEST_EWMA_i2 = WEST_EWMA_i2,
+    ALL_NS_i2 = ALL_NS_i2,
+    ALL_SMA_i2 = ALL_SMA_i2,
+    ALL_EWMA_i2 = ALL_EWMA_i2
 )
 
 combined_geo_strats_i2 <- bind_rows(strat_dfs_i2, .id = "Source") %>%
@@ -2512,6 +2541,17 @@ G7_SMA_i3 <- compute_strategy(wide_smooth_sma_i3,
 G7_NS_i3 <- compute_strategy(wide_non_smooth_i3, 
                              returns_long,
                              cols = g7)
+ALL_EWMA_i3 <- compute_strategy(wide_smooth_ewma_i3, 
+                               returns_long, 
+                               suffix = "_EWMA", 
+                               cols = all)
+ALL_SMA_i3 <- compute_strategy(wide_smooth_sma_i3, 
+                              returns_long, 
+                              suffix = "_SMA", 
+                              cols = all)
+ALL_NS_i3 <- compute_strategy(wide_non_smooth_i3, 
+                             returns_long,
+                             cols = all)
 
 ### combining returns
 
@@ -2524,7 +2564,10 @@ strat_dfs_i3 <- list(
     ASIA_EWMA_i3 = ASIA_EWMA_i3,
     WEST_NS_i3 = WEST_NS_i3,
     WEST_SMA_i3 = WEST_SMA_i3,
-    WEST_EWMA_i3 = WEST_EWMA_i3
+    WEST_EWMA_i3 = WEST_EWMA_i3,
+    ALL_NS_i3 = ALL_NS_i3,
+    ALL_SMA_i3 = ALL_SMA_i3,
+    ALL_EWMA_i3 = ALL_EWMA_i3
 )
 
 combined_geo_strats_i3 <- bind_rows(strat_dfs_i3, .id = "Source") %>%
@@ -3111,6 +3154,60 @@ compute_strategy_expectile <- function(forecast_df, return_df, suffix = NULL, co
 
 #### Implementing the expectile strats function ----
 
+please <- function(data, alpha, returns, suffix, window = 60) {
+    forecast <- run_expectile_forecast(data, alpha, window)
+    
+    all_temp <- compute_strategy_expectile(forecast, returns)
+    g7_temp <- compute_strategy_expectile(forecast, returns, cols = g7)
+    asia_temp <- compute_strategy_expectile(forecast, returns, cols = east)
+    west_temp <- compute_strategy_expectile(forecast, returns, cols = west)
+    
+    combined_temp <- bind_rows(
+        all_temp$returns %>% mutate(Source = "All", Smoothing = suffix),
+        g7_temp$returns %>% mutate(Source = "G7", Smoothing = suffix),
+        asia_temp$returns %>% mutate(Source = "Asia", Smoothing = suffix),
+        west_temp$returns %>% mutate(Source = "West", Smoothing = suffix)
+    )
+    
+    combined_temp_long <- combined_temp %>%
+        pivot_longer(cols = c(PortReturn, PortLoss, Cumulative, Cum_Naive), 
+                     names_to = "Metric", values_to = "Value") %>%
+        mutate(
+            Strategy = case_when(
+                Metric == "PortReturn" ~ "Portfolio Return",
+                Metric == "PortLoss" ~ "Portfolio Loss",
+                Metric == "Cumulative" ~ "Expectile Forecast",
+                Metric == "Cum_Naive" ~ "Naive Forecast",
+                TRUE ~ Metric
+            )
+        ) %>%
+        mutate(
+            Smoothing = suffix,
+            Source = factor(Source, levels = c("All", "G7", "Asia", "West"))
+        )
+    
+    
+    exp_returns_temp <- combined_temp_long %>%
+        filter(Metric == "PortReturn") %>%
+        mutate(
+            Strategy = paste(Source, Smoothing, "Expectile", sep = "_")
+        ) %>%
+        dplyr::select(Date, Strategy, Return = Value)
+    
+    naive_returns_temp <- combined_temp_long %>%
+        dplyr::select(Date, Source, Smoothing, PortReturn_naive) %>%
+        distinct(Date, Source, Smoothing, PortReturn_naive) %>%
+        rename(Value = PortReturn_naive) %>%
+        mutate(
+            Strategy = paste(Source, Smoothing, "Naive", sep = "_")
+        ) %>%
+        dplyr::select(Date, Strategy, Return = Value)
+    
+    return(list(exp_returns = exp_returns_temp,
+                naive_returns = naive_returns_temp))
+    
+}
+
 forecast_df_exp <- run_expectile_forecast(monthly_df1, alpha_long, window = 60)
 forecast_exp_ewma <- run_expectile_forecast(monthly_df1, alpha_ewma_long, window = 60)
 forecast_exp_sma <- run_expectile_forecast(monthly_df1, alpha_sma_long, window = 60)
@@ -3314,9 +3411,186 @@ all_portfolios_xts <- xts(all_portfolios_wide[,-1], order.by = all_portfolios_wi
 
 all_alphaScreen <- alphaScreening(all_portfolios_xts, control = c("nCore" = parallel::detectCores() - 1))
 all_sharpeScreen <- sharpeScreening(all_portfolios_xts, control = c("nCore" = parallel::detectCores() - 1))
-all_msharpeScreen <- msharpeScreening(all_portfolios_xts, na.neg = F,control = c("nCore" = parallel::detectCores() - 1))
+all_msharpeScreen <- msharpeScreening(all_portfolios_xts, na.neg = F, control = c("nCore" = parallel::detectCores() - 1))
+
+
+PerformanceAnalytics::ES(all_portfolios_xts[, "ALL_NS_Delta"], p = 0.95, method = "historical")
+PerformanceAnalytics::ES(all_portfolios_xts[, "G7_NS_Delta"], p = 0.95, method = "historical")
+PerformanceAnalytics::ES(all_portfolios_xts[, "ASIA_NS_Delta"], p = 0.95, method = "historical")
+
+PerformanceAnalytics::VaR(all_portfolios_xts[, "ALL_NS_Delta"], p = 0.95, method = "historical")
+PerformanceAnalytics::VaR(all_portfolios_xts[, "G7_NS_Delta"], p = 0.95, method = "historical")
+PerformanceAnalytics::VaR(all_portfolios_xts[, "ASIA_NS_Delta"], p = 0.95, method = "historical")
+
+
+avg_returns <- colMeans(all_portfolios_xts, na.rm = TRUE)
+es_values <- ES(all_portfolios_xts, p = 0.95, method = "historical")
+es_positive <- abs(coredata(es_values))
+var_values <- VaR(all_portfolios_xts, p = 0.95, method = "historical")
+var_positive <- abs(coredata(var_values))
+mmSharpe <- (avg_returns) / es_positive
+mSharpe <- (avg_returns) / var_positive
+
+# combined_geo_strats_i1 etc for the instrument set results
+exp_i1_ns <- please(monthly_df1, alpha_long_i1, returns_long, "NS", window = 60)
+exp_i2_ns <- please(monthly_df1, alpha_long_i2, returns_long, "NS", window = 60)
+exp_i3_ns <- please(monthly_df1, alpha_long_i3, returns_long, "NS", window = 60)
+
+exp_i1_sma <- please(monthly_df1, alpha_sma_long_i1, returns_long, "SMA", window = 60)
+exp_i2_sma <- please(monthly_df1, alpha_sma_long_i2, returns_long, "SMA", window = 60)
+exp_i3_sma <- please(monthly_df1, alpha_sma_long_i3, returns_long, "SMA", window = 60)
+
+exp_i1_ewma <- please(monthly_df1, alpha_ewma_long_i1, returns_long, "EWMA", window = 60)
+exp_i2_ewma <- please(monthly_df1, alpha_ewma_long_i2, returns_long, "EWMA", window = 60)
+exp_i3_ewma <- please(monthly_df1, alpha_ewma_long_i3, returns_long, "EWMA", window = 60)
+
+combined_exp_strats_i1 <- bind_rows(
+    exp_i1_ns$exp_returns,
+    exp_i1_sma$exp_returns,
+    exp_i1_ewma$exp_returns
+)
+combined_exp_strats_i2 <- bind_rows(
+    exp_i2_ns$exp_returns,
+    exp_i2_sma$exp_returns,
+    exp_i2_ewma$exp_returns
+)
+combined_exp_strats_i3 <- bind_rows(
+    exp_i3_ns$exp_returns,
+    exp_i3_sma$exp_returns,
+    exp_i3_ewma$exp_returns
+)
+combined_naive_strats_i1 <- bind_rows(
+    exp_i1_ns$naive_returns,
+    exp_i1_sma$naive_returns,
+    exp_i1_ewma$naive_returns
+)
+combined_naive_strats_i2 <- bind_rows(
+    exp_i2_ns$naive_returns,
+    exp_i2_sma$naive_returns,
+    exp_i2_ewma$naive_returns
+)
+combined_naive_strats_i3 <- bind_rows(
+    exp_i3_ns$naive_returns,
+    exp_i3_sma$naive_returns,
+    exp_i3_ewma$naive_returns
+)
+
+analyze_instrument_set <- function(exp_ns, exp_sma, exp_ewma,
+                                   naive_ns, naive_sma, naive_ewma,
+                                   geo_returns,
+                                   region_order = c("All", "G7", "Asia", "West")) {
+    
+    # Combine expectile returns
+    exp_returns <- bind_rows(
+        exp_ns$exp_returns,
+        exp_sma$exp_returns,
+        exp_ewma$exp_returns
+    )
+    
+    # Combine naive returns
+    naive_returns <- bind_rows(
+        naive_ns$naive_returns,
+        naive_sma$naive_returns,
+        naive_ewma$naive_returns
+    )
+    
+    # Clean region names in geo_returns and reshape
+    geo_tidy <- geo_returns %>%
+        rename(Alpha = Ret_a, Delta = Ret_d, Ranked = Ret_r) %>%
+        mutate(
+            Region = case_when(
+                Region %in% c("ALL", "All") ~ "All",
+                Region %in% c("G7") ~ "G7",
+                Region %in% c("ASIA", "Asia") ~ "Asia",
+                Region %in% c("WEST", "West") ~ "West",
+                TRUE ~ Region
+            ),
+            Smoothing = case_when(
+                Smoothing %in% c("Non-Smoothed", "NS") ~ "NS",
+                TRUE ~ Smoothing
+            )
+        ) %>%
+        pivot_longer(cols = c(Alpha, Delta, Ranked), names_to = "strat", values_to = "Return") %>%
+        mutate(
+            Strategy = paste(Region, Smoothing, strat, sep = "_")
+        ) %>%
+        select(Date, Strategy, Return)
+    
+    
+    # Combine all strategy returns
+    all_portfolios <- bind_rows(
+        exp_returns,
+        naive_returns,
+        geo_tidy
+    ) %>%
+        arrange(Date) %>%
+        group_by(Date, Strategy) %>%
+        summarise(Return = mean(Return, na.rm = TRUE), .groups = "drop")
+    
+    # Convert to wide format
+    all_portfolios_wide <- all_portfolios %>%
+        pivot_wider(names_from = Strategy, values_from = Return)
+    
+    # Trim to common starting date
+    min_common_date <- all_portfolios %>%
+        group_by(Strategy) %>%
+        summarise(min_date = min(Date)) %>%
+        summarise(max(min_date)) %>%
+        pull()
+    
+    all_portfolios_wide <- all_portfolios_wide %>%
+        filter(Date >= min_common_date) %>%
+        arrange(Date)
+    
+    # Sort strategy columns by region order
+    all_cols <- colnames(all_portfolios_wide)
+    non_date_cols <- setdiff(all_cols, "Date")
+    
+    region_prefixes <- sapply(strsplit(non_date_cols, "_"), `[[`, 1)
+    
+    sorted_cols <- unlist(lapply(region_order, function(region) {
+        non_date_cols[region_prefixes == region]
+    }))
+    
+    # Final reordering
+    all_portfolios_wide <- all_portfolios_wide[, c("Date", sorted_cols)]
+    
+    # Convert to xts
+    all_portfolios_xts <- xts(all_portfolios_wide[,-1], order.by = all_portfolios_wide$Date)
+    
+    # Run performance screeners
+    alpha_screen <- alphaScreening(all_portfolios_xts, control = c("nCore" = parallel::detectCores() - 1))
+    sharpe_screen <- sharpeScreening(all_portfolios_xts, control = c("nCore" = parallel::detectCores() - 1))
+    msharp_screen <- msharpeScreening(all_portfolios_xts, na.neg = FALSE, control = c("nCore" = parallel::detectCores() - 1))
+    
+    return(list(
+        xts = all_portfolios_xts,
+        alpha = alpha_screen,
+        sharpe = sharpe_screen,
+        msharpe = msharp_screen
+    ))
+}
 
 
 
+# Instrument Set I1
+results_i1 <- analyze_instrument_set(
+    exp_i1_ns, exp_i1_sma, exp_i1_ewma,
+    exp_i1_ns, exp_i1_sma, exp_i1_ewma,  # naive are inside same list
+    combined_geo_strats_i1
+)
 
+# Instrument Set I2
+results_i2 <- analyze_instrument_set(
+    exp_i2_ns, exp_i2_sma, exp_i2_ewma,
+    exp_i2_ns, exp_i2_sma, exp_i2_ewma,
+    combined_geo_strats_i2
+)
+
+# Instrument Set I3
+results_i3 <- analyze_instrument_set(
+    exp_i3_ns, exp_i3_sma, exp_i3_ewma,
+    exp_i3_ns, exp_i3_sma, exp_i3_ewma,
+    combined_geo_strats_i3
+)
 
