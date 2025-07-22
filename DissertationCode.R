@@ -3314,7 +3314,7 @@ all_portfolios_xts <- xts(all_portfolios_wide[,-1], order.by = all_portfolios_wi
 
 all_alphaScreen <- alphaScreening(all_portfolios_xts, control = c("nCore" = parallel::detectCores() - 1))
 all_sharpeScreen <- sharpeScreening(all_portfolios_xts, control = c("nCore" = parallel::detectCores() - 1))
-all_msharpeScreen <- msharpeScreening(all_portfolios_xts, control = c("nCore" = parallel::detectCores() - 1))
+all_msharpeScreen <- msharpeScreening(all_portfolios_xts, na.neg = F,control = c("nCore" = parallel::detectCores() - 1))
 
 
 
