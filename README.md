@@ -57,6 +57,7 @@ w(\alpha_c, t+1) = \dfrac{0.5 - \alpha_{c,t}}{\sum_{i}|0.5 - \alpha_{i,t}|}
 $$
 
 Our Ranked-$\alpha$ Strategy:
+
 $$
 w(\alpha_c,t) = \begin{cases}
 \dfrac{-1}{N} & \text{if} \quad \alpha_c > \text{med}(\alpha) \\
@@ -65,6 +66,7 @@ w(\alpha_c,t) = \begin{cases}
 $$
 
 Our $\Delta$-Based Strategy:
+
 $$
 w(\Delta_c, t) = \begin{cases}
 \dfrac{-1}{\sum_i \mathbf{1}(\Delta_{i,t}> 0) } & \text{if} \quad \Delta_{c,t} > 0\\
